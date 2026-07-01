@@ -48,8 +48,23 @@ pnpm build         # emit to dist/
 
 49 unit tests covering valid + invalid inputs for every schema.
 
+## First-time setup for consuming repos
+
+After publishing a new version, consuming repos' CI needs read access to the package. **One-time per new consuming repo:**
+
+1. Go to **github.com/orgs/heediq/packages/npm/shared** → Package settings → **Manage repository access**
+2. Add the consuming repo (e.g. `heediq-api`, `heediq-web`, `heediq-worker-summarization`)
+
+This grants `GITHUB_TOKEN` in that repo's CI the right to `pnpm install @heediq/shared`. Without it, CI gets a 403.
+
+**Local dev:** add a classic PAT with `read:packages` scope to `~/.npmrc`:
+```
+//npm.pkg.github.com/:_authToken=YOUR_PAT
+```
+
 ## Gotchas & Constraints
 
 - `module: NodeNext` + `.js` extensions required in imports — TypeScript ESM with NodeNext resolution.
 - `allowBuilds.esbuild: true` in `pnpm-workspace.yaml` — required by vitest's bundler.
 - Publish runs on `main` only. Bump `version` in `package.json` before merging to `main`.
+- CI 403 on install = consuming repo not added to package access (see First-time setup above).

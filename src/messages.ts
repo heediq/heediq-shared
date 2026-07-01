@@ -13,14 +13,16 @@ export const TranscriptionJobMessageSchema = z.object({
 export type TranscriptionJobMessage = z.infer<typeof TranscriptionJobMessageSchema>
 
 // SQS message sent to heediq-summarization queue (D-065)
-// sourceType='audio': contentRef is the S3 key of the transcript file written by the transcription worker
-// sourceType='text': contentRef is the S3 key of the uploaded text/PDF/email/Excel file
+// sourceType='text': contentRef is the recordingId — summarization worker reads
+//   heediq-recordings[recordingId].transcript from DynamoDB (transcription worker writes there).
+// sourceType='audio': contentRef is an S3 key — future path for direct audio/text/PDF uploads.
 export const SummarizationJobMessageSchema = z.object({
   jobId: z.string().uuid(),
   recordingId: z.string().uuid(),
   orgId: z.string().uuid(),
   sourceType: SourceTypeSchema,
   contentRef: z.string().min(1),
+  tier: TierSchema,
 })
 export type SummarizationJobMessage = z.infer<typeof SummarizationJobMessageSchema>
 
