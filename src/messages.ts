@@ -22,6 +22,7 @@ export const SummarizationJobMessageSchema = z.object({
   orgId: z.string().uuid(),
   sourceType: SourceTypeSchema,
   contentRef: z.string().min(1),
+  tier: TierSchema,
 })
 export type SummarizationJobMessage = z.infer<typeof SummarizationJobMessageSchema>
 

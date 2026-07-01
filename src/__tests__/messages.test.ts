@@ -25,16 +25,20 @@ describe('TranscriptionJobMessageSchema', () => {
 describe('SummarizationJobMessageSchema', () => {
   const valid = {
     jobId: uuid, recordingId: uuid, orgId: uuid,
-    sourceType: 'audio' as const, contentRef: 'transcripts/rec1.txt',
+    sourceType: 'audio' as const, contentRef: 'transcripts/rec1.txt', tier: 'free' as const,
   }
-  it('parses audio source type', () => {
-    expect(SummarizationJobMessageSchema.parse(valid)).toMatchObject({ sourceType: 'audio' })
+  it('parses audio source type for free tier', () => {
+    expect(SummarizationJobMessageSchema.parse(valid)).toMatchObject({ sourceType: 'audio', tier: 'free' })
   })
-  it('parses text source type', () => {
-    expect(SummarizationJobMessageSchema.parse({ ...valid, sourceType: 'text' })).toMatchObject({ sourceType: 'text' })
+  it('parses text source type for paid tier', () => {
+    expect(SummarizationJobMessageSchema.parse({ ...valid, sourceType: 'text', tier: 'paid' })).toMatchObject({ sourceType: 'text', tier: 'paid' })
   })
   it('rejects empty contentRef', () => {
     expect(() => SummarizationJobMessageSchema.parse({ ...valid, contentRef: '' })).toThrow()
+  })
+  it('rejects missing tier', () => {
+    const { tier: _, ...noTier } = valid
+    expect(() => SummarizationJobMessageSchema.parse(noTier)).toThrow()
   })
 })
 
