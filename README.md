@@ -33,7 +33,7 @@ function process(r: Recording) { ... }
 
 ## Versioning
 
-Starts at `0.1.0`; graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.1.1`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
 
 Breaking changes (remove/rename a field, tighten a validator) require a minor version bump and a coordinated update in consuming repos.
 
