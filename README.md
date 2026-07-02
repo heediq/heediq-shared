@@ -10,9 +10,9 @@ Published as a private package to GitHub Packages (`@heediq/shared`). Consuming 
 
 ## Key Files
 
-- `src/enums.ts` — `Tier`, `WhisperModel`, `JobStatus`, `RecordingStatus`, `OrgRole`, `SourceType`
-- `src/domain.ts` — `Org`, `User`, `Recording`, `Job`, `Summary` domain schemas
-- `src/requests.ts` — API request/response schemas (`CreateRecordingRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, etc.)
+- `src/enums.ts` — `Tier`, `WhisperModel`, `JobStatus`, `SourceStatus`, `OrgRole`, `SourceType`
+- `src/domain.ts` — `Org`, `User`, `Source`, `Job`, `Summary` domain schemas
+- `src/requests.ts` — API request/response schemas (`CreateSourceRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, etc.)
 - `src/messages.ts` — SQS message schemas (`TranscriptionJobMessage`, `SummarizationJobMessage`) and WebSocket push schema (`WsStatusMessage`)
 - `src/api.ts` — `ApiSuccess<T>` / `ApiError` response envelope types
 - `src/index.ts` — re-exports everything
@@ -22,18 +22,30 @@ Published as a private package to GitHub Packages (`@heediq/shared`). Consuming 
 Each schema exports both a Zod schema and an inferred TypeScript type. Consumers use the type for TypeScript, and the schema for runtime validation at boundaries.
 
 ```ts
-import { RecordingSchema, type Recording, EnqueueJobRequestSchema } from '@heediq/shared'
+import { SourceSchema, type Source, EnqueueJobRequestSchema } from '@heediq/shared'
 
 // Runtime validation (parse throws on invalid input)
-const recording = RecordingSchema.parse(rawData)
+const source = SourceSchema.parse(rawData)
 
 // Type use
-function process(r: Recording) { ... }
+function process(s: Source) { ... }
 ```
+
+`Source` (formerly `Recording`) is the generic ingested-content entity per D-068 — any unit a user
+puts into the system (audio today; PDF/doc/image/pasted text as ingestion paths land), not just
+audio. It carries a `labels: string[]` field for free-form tagging, independent of any future
+Container association. `Container` (project/epic/story hierarchy) is planned but not yet added to
+this package — see `DECISIONS.md` D-068/D-069.
 
 ## Versioning
 
-Starts at `0.1.0`; graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.2.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.2.0 breaking change (D-068):** `Recording` → `Source`, `recordingId` → `sourceId` across all
+schemas (`domain.ts`, `requests.ts`, `messages.ts`); `RecordingStatus` → `SourceStatus`;
+`CreateRecordingRequest`/`UpdateRecordingRequest` → `CreateSourceRequest`/`UpdateSourceRequest`;
+added `labels: string[]` (default `[]`) to `SourceSchema`. Consuming repos must update field/type
+references and the underlying DynamoDB table name (`heediq-recordings` → `heediq-sources`) together.
 
 Breaking changes (remove/rename a field, tighten a validator) require a minor version bump and a coordinated update in consuming repos.
 
@@ -46,7 +58,7 @@ pnpm typecheck     # tsc --noEmit
 pnpm build         # emit to dist/
 ```
 
-49 unit tests covering valid + invalid inputs for every schema.
+50 unit tests covering valid + invalid inputs for every schema.
 
 ## First-time setup for consuming repos
 

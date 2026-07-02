@@ -18,13 +18,13 @@ export const JobStatusSchema = z.enum([
 ])
 export type JobStatus = z.infer<typeof JobStatusSchema>
 
-export const RecordingStatusSchema = z.enum([
+export const SourceStatusSchema = z.enum([
   'uploading',
   'processing',
   'ready',
   'failed',
 ])
-export type RecordingStatus = z.infer<typeof RecordingStatusSchema>
+export type SourceStatus = z.infer<typeof SourceStatusSchema>
 
 export const OrgRoleSchema = z.enum(['admin', 'member'])
 export type OrgRole = z.infer<typeof OrgRoleSchema>

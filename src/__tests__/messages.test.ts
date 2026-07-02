@@ -10,8 +10,8 @@ const now = new Date().toISOString()
 
 describe('TranscriptionJobMessageSchema', () => {
   const valid = {
-    jobId: uuid, recordingId: uuid, orgId: uuid,
-    audioS3Key: 'recordings/org1/rec1/audio.webm',
+    jobId: uuid, sourceId: uuid, orgId: uuid,
+    audioS3Key: 'sources/org1/rec1/audio.webm',
     model: 'small' as const, tier: 'free' as const,
   }
   it('parses valid transcription message', () => {
@@ -24,7 +24,7 @@ describe('TranscriptionJobMessageSchema', () => {
 
 describe('SummarizationJobMessageSchema', () => {
   const valid = {
-    jobId: uuid, recordingId: uuid, orgId: uuid,
+    jobId: uuid, sourceId: uuid, orgId: uuid,
     sourceType: 'audio' as const, contentRef: 'transcripts/rec1.txt', tier: 'free' as const,
   }
   it('parses audio source type for free tier', () => {
@@ -45,7 +45,7 @@ describe('SummarizationJobMessageSchema', () => {
 describe('WsStatusMessageSchema', () => {
   const valid = {
     type: 'job_status' as const,
-    jobId: uuid, recordingId: uuid,
+    jobId: uuid, sourceId: uuid,
     status: 'transcribing' as const, updatedAt: now,
   }
   it('parses valid status message', () => {
