@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { OrgSchema, UserSchema, RecordingSchema, JobSchema, SummarySchema } from '../domain.js'
+import { OrgSchema, UserSchema, SourceSchema, JobSchema, SummarySchema } from '../domain.js'
 
 const now = new Date().toISOString()
 const uuid = '00000000-0000-0000-0000-000000000001'
@@ -27,25 +27,25 @@ describe('UserSchema', () => {
   })
 })
 
-describe('RecordingSchema', () => {
+describe('SourceSchema', () => {
   const valid = {
-    recordingId: uuid, orgId: uuid, userId: 'u1', title: 'Meeting',
+    sourceId: uuid, orgId: uuid, userId: 'u1', title: 'Meeting',
     status: 'ready' as const, createdAt: now, updatedAt: now,
   }
-  it('parses valid recording', () => {
-    expect(RecordingSchema.parse(valid)).toMatchObject({ title: 'Meeting', status: 'ready' })
+  it('parses valid source', () => {
+    expect(SourceSchema.parse(valid)).toMatchObject({ title: 'Meeting', status: 'ready' })
   })
   it('allows optional durationSecs', () => {
-    expect(RecordingSchema.parse({ ...valid, durationSecs: 3600 })).toMatchObject({ durationSecs: 3600 })
+    expect(SourceSchema.parse({ ...valid, durationSecs: 3600 })).toMatchObject({ durationSecs: 3600 })
   })
   it('rejects empty title', () => {
-    expect(() => RecordingSchema.parse({ ...valid, title: '' })).toThrow()
+    expect(() => SourceSchema.parse({ ...valid, title: '' })).toThrow()
   })
 })
 
 describe('JobSchema', () => {
   const valid = {
-    jobId: uuid, recordingId: uuid, orgId: uuid,
+    jobId: uuid, sourceId: uuid, orgId: uuid,
     status: 'queued' as const, model: 'small' as const, tier: 'free' as const,
   }
   it('parses valid job', () => {
@@ -58,7 +58,7 @@ describe('JobSchema', () => {
 
 describe('SummarySchema', () => {
   const valid = {
-    recordingId: uuid, orgId: uuid,
+    sourceId: uuid, orgId: uuid,
     requirements: ['R1'], decisions: ['D1'], openQuestions: ['Q1'], actionItems: ['A1'],
     createdAt: now,
   }

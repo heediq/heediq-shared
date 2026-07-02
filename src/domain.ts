@@ -3,7 +3,7 @@ import {
   TierSchema,
   WhisperModelSchema,
   JobStatusSchema,
-  RecordingStatusSchema,
+  SourceStatusSchema,
   OrgRoleSchema,
 } from './enums.js'
 
@@ -26,22 +26,23 @@ export const UserSchema = z.object({
 })
 export type User = z.infer<typeof UserSchema>
 
-export const RecordingSchema = z.object({
-  recordingId: z.string().uuid(),
+export const SourceSchema = z.object({
+  sourceId: z.string().uuid(),
   orgId: z.string().uuid(),
   userId: z.string(),
   title: z.string().min(1).max(255),
-  status: RecordingStatusSchema,
+  status: SourceStatusSchema,
   durationSecs: z.number().int().positive().optional(),
   audioS3Key: z.string().optional(),
+  labels: z.array(z.string().min(1).max(50)).max(20).default([]),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 })
-export type Recording = z.infer<typeof RecordingSchema>
+export type Source = z.infer<typeof SourceSchema>
 
 export const JobSchema = z.object({
   jobId: z.string().uuid(),
-  recordingId: z.string().uuid(),
+  sourceId: z.string().uuid(),
   orgId: z.string().uuid(),
   status: JobStatusSchema,
   model: WhisperModelSchema,
@@ -53,7 +54,7 @@ export const JobSchema = z.object({
 export type Job = z.infer<typeof JobSchema>
 
 export const SummarySchema = z.object({
-  recordingId: z.string().uuid(),
+  sourceId: z.string().uuid(),
   orgId: z.string().uuid(),
   transcript: z.string().optional(),
   requirements: z.array(z.string()),

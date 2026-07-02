@@ -3,7 +3,7 @@ import {
   TierSchema,
   WhisperModelSchema,
   JobStatusSchema,
-  RecordingStatusSchema,
+  SourceStatusSchema,
   OrgRoleSchema,
   SourceTypeSchema,
 } from '../enums.js'
@@ -38,10 +38,10 @@ describe('JobStatusSchema', () => {
   })
 })
 
-describe('RecordingStatusSchema', () => {
+describe('SourceStatusSchema', () => {
   it('accepts all valid statuses', () => {
     for (const s of ['uploading', 'processing', 'ready', 'failed']) {
-      expect(RecordingStatusSchema.parse(s)).toBe(s)
+      expect(SourceStatusSchema.parse(s)).toBe(s)
     }
   })
 })
