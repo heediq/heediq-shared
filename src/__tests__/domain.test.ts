@@ -25,6 +25,12 @@ describe('UserSchema', () => {
   it('rejects invalid email', () => {
     expect(() => UserSchema.parse({ ...valid, email: 'not-an-email' })).toThrow()
   })
+  it('defaults passwordSet to true when absent (pre-D-078 rows)', () => {
+    expect(UserSchema.parse(valid).passwordSet).toBe(true)
+  })
+  it('accepts an explicit passwordSet:false (federated-only account)', () => {
+    expect(UserSchema.parse({ ...valid, passwordSet: false }).passwordSet).toBe(false)
+  })
 })
 
 describe('SourceSchema', () => {

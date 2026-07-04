@@ -39,7 +39,12 @@ this package — see `DECISIONS.md` D-068/D-069.
 
 ## Versioning
 
-Current version: `0.2.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.3.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.3.0 additive change (D-078):** `UserSchema` gains `passwordSet: boolean` (defaults `true` so
+existing rows parse unchanged); new request/response schemas `LookupEmailRequest/Response`,
+`LinkStartRequest`, `LinkConfirmRequest`, `LinkAddProviderRequest` for the cross-provider account
+linking flow. Non-breaking — no existing field renamed or removed.
 
 **0.2.0 breaking change (D-068):** `Recording` → `Source`, `recordingId` → `sourceId` across all
 schemas (`domain.ts`, `requests.ts`, `messages.ts`); `RecordingStatus` → `SourceStatus`;
