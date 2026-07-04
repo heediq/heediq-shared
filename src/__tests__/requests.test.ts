@@ -4,6 +4,10 @@ import {
   UpdateSourceRequestSchema,
   EnqueueJobRequestSchema,
   PresignUploadRequestSchema,
+  LookupEmailRequestSchema,
+  LookupEmailResponseSchema,
+  LinkConfirmRequestSchema,
+  LinkAddProviderRequestSchema,
 } from '../requests.js'
 
 const uuid = '00000000-0000-0000-0000-000000000001'
@@ -56,5 +60,34 @@ describe('PresignUploadRequestSchema', () => {
   })
   it('rejects files over 2 GB', () => {
     expect(() => PresignUploadRequestSchema.parse({ sourceId: uuid, contentType: 'audio/webm', fileSizeBytes: 2 * 1024 * 1024 * 1024 + 1 })).toThrow()
+  })
+})
+
+describe('LookupEmailRequestSchema / LookupEmailResponseSchema (D-078)', () => {
+  it('rejects non-email input', () => {
+    expect(() => LookupEmailRequestSchema.parse({ email: 'not-an-email' })).toThrow()
+  })
+  it('response allows passwordSet: null for a non-existent email', () => {
+    expect(LookupEmailResponseSchema.parse({ exists: false, passwordSet: null })).toMatchObject({ exists: false })
+  })
+})
+
+describe('LinkConfirmRequestSchema (D-078)', () => {
+  it('rejects a password under 8 chars', () => {
+    expect(() => LinkConfirmRequestSchema.parse({ email: 'a@b.com', code: '123456', newPassword: 'short' })).toThrow()
+  })
+  it('accepts a valid confirm request', () => {
+    expect(LinkConfirmRequestSchema.parse({ email: 'a@b.com', code: '123456', newPassword: 'longenough1' }))
+      .toMatchObject({ email: 'a@b.com' })
+  })
+})
+
+describe('LinkAddProviderRequestSchema (D-079)', () => {
+  it('rejects an unsupported provider', () => {
+    expect(() => LinkAddProviderRequestSchema.parse({ provider: 'Facebook', providerUserId: 'x' })).toThrow()
+  })
+  it('accepts Google/Microsoft', () => {
+    expect(LinkAddProviderRequestSchema.parse({ provider: 'Google', providerUserId: 'g-1' }))
+      .toMatchObject({ provider: 'Google' })
   })
 })

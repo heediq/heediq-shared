@@ -33,3 +33,36 @@ export const PresignUploadResponseSchema = z.object({
   expiresIn: z.number().int(),
 })
 export type PresignUploadResponse = z.infer<typeof PresignUploadResponseSchema>
+
+// ── Account linking (D-078, D-079) ──────────────────────────────────────────
+// Response never names a provider — the unified sign-in screen must show identical,
+// non-disclosing copy whether the email exists via native signup or a federated IdP.
+
+export const LookupEmailRequestSchema = z.object({
+  email: z.string().email(),
+})
+export type LookupEmailRequest = z.infer<typeof LookupEmailRequestSchema>
+
+export const LookupEmailResponseSchema = z.object({
+  exists: z.boolean(),
+  passwordSet: z.boolean().nullable(),
+})
+export type LookupEmailResponse = z.infer<typeof LookupEmailResponseSchema>
+
+export const LinkStartRequestSchema = z.object({
+  email: z.string().email(),
+})
+export type LinkStartRequest = z.infer<typeof LinkStartRequestSchema>
+
+export const LinkConfirmRequestSchema = z.object({
+  email: z.string().email(),
+  code: z.string().min(1),
+  newPassword: z.string().min(8),
+})
+export type LinkConfirmRequest = z.infer<typeof LinkConfirmRequestSchema>
+
+export const LinkAddProviderRequestSchema = z.object({
+  provider: z.enum(['Google', 'Microsoft']),
+  providerUserId: z.string().min(1),
+})
+export type LinkAddProviderRequest = z.infer<typeof LinkAddProviderRequestSchema>

@@ -22,6 +22,10 @@ export const UserSchema = z.object({
   orgId: z.string().uuid(),
   email: z.string().email(),
   role: OrgRoleSchema,
+  // Whether this identity has a Cognito password credential — false for federated-only
+  // accounts that haven't linked a native sign-in yet (D-078). Defaults true for rows written
+  // before this field existed (native-only era, pre account-linking).
+  passwordSet: z.boolean().default(true),
   createdAt: z.string().datetime(),
 })
 export type User = z.infer<typeof UserSchema>
