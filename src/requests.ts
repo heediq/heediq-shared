@@ -66,3 +66,19 @@ export const LinkAddProviderRequestSchema = z.object({
   providerUserId: z.string().min(1),
 })
 export type LinkAddProviderRequest = z.infer<typeof LinkAddProviderRequestSchema>
+
+// ── Active sign-in methods (D-091) ──────────────────────────────────────────
+// heediq-user-auth-methods is the source of truth for which methods are active on an
+// account — Cognito itself is never queried ad hoc for this. Read-only for now; no
+// unlink/remove action is exposed (out of scope).
+
+export const AuthMethodSchema = z.object({
+  provider: z.enum(['COGNITO', 'Google', 'Microsoft']),
+  linkedAt: z.string().datetime(),
+})
+export type AuthMethod = z.infer<typeof AuthMethodSchema>
+
+export const ListAuthMethodsResponseSchema = z.object({
+  methods: z.array(AuthMethodSchema),
+})
+export type ListAuthMethodsResponse = z.infer<typeof ListAuthMethodsResponseSchema>

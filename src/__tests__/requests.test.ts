@@ -8,6 +8,8 @@ import {
   LookupEmailResponseSchema,
   LinkConfirmRequestSchema,
   LinkAddProviderRequestSchema,
+  AuthMethodSchema,
+  ListAuthMethodsResponseSchema,
 } from '../requests.js'
 
 const uuid = '00000000-0000-0000-0000-000000000001'
@@ -89,5 +91,28 @@ describe('LinkAddProviderRequestSchema (D-079)', () => {
   it('accepts Google/Microsoft', () => {
     expect(LinkAddProviderRequestSchema.parse({ provider: 'Google', providerUserId: 'g-1' }))
       .toMatchObject({ provider: 'Google' })
+  })
+})
+
+describe('AuthMethodSchema / ListAuthMethodsResponseSchema (D-091)', () => {
+  it('rejects an unsupported provider', () => {
+    expect(() => AuthMethodSchema.parse({ provider: 'Facebook', linkedAt: '2026-07-04T00:00:00.000Z' })).toThrow()
+  })
+  it('rejects a non-ISO linkedAt', () => {
+    expect(() => AuthMethodSchema.parse({ provider: 'COGNITO', linkedAt: 'not-a-date' })).toThrow()
+  })
+  it('accepts a valid method', () => {
+    expect(AuthMethodSchema.parse({ provider: 'COGNITO', linkedAt: '2026-07-04T00:00:00.000Z' }))
+      .toMatchObject({ provider: 'COGNITO' })
+  })
+  it('accepts an empty methods list', () => {
+    expect(ListAuthMethodsResponseSchema.parse({ methods: [] })).toMatchObject({ methods: [] })
+  })
+  it('accepts a populated methods list', () => {
+    expect(
+      ListAuthMethodsResponseSchema.parse({
+        methods: [{ provider: 'Google', linkedAt: '2026-07-04T00:00:00.000Z' }],
+      }),
+    ).toMatchObject({ methods: [{ provider: 'Google' }] })
   })
 })
