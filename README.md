@@ -63,7 +63,7 @@ pnpm typecheck     # tsc --noEmit
 pnpm build         # emit to dist/
 ```
 
-50 unit tests covering valid + invalid inputs for every schema.
+58 unit tests covering valid + invalid inputs for every schema.
 
 ## First-time setup for consuming repos
 
