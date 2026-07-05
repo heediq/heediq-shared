@@ -73,3 +73,55 @@ describe('createLogger', () => {
     expect(line).toMatchObject({ sourceId: 'src-1', status: 'ready', jobId: 'job-1' })
   })
 })
+
+describe('createLogger level filtering (D-093)', () => {
+  const originalLogLevel = process.env.LOG_LEVEL
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    if (originalLogLevel === undefined) {
+      delete process.env.LOG_LEVEL
+    } else {
+      process.env.LOG_LEVEL = originalLogLevel
+    }
+  })
+
+  it('suppresses debug logs by default (LOG_LEVEL unset)', () => {
+    delete process.env.LOG_LEVEL
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {})
+    createLogger('heediq-api').debug('verbose detail')
+    expect(debugSpy).not.toHaveBeenCalled()
+  })
+
+  it('still emits info/warn/error by default (LOG_LEVEL unset)', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    createLogger('heediq-api').info('lifecycle event')
+    expect(logSpy).toHaveBeenCalledOnce()
+  })
+
+  it('emits debug logs when LOG_LEVEL=debug', () => {
+    process.env.LOG_LEVEL = 'debug'
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {})
+    createLogger('heediq-api').debug('verbose detail')
+    const line = parseLastLog(debugSpy)
+    expect(line).toMatchObject({ level: 'debug', message: 'verbose detail' })
+  })
+
+  it('suppresses info logs when LOG_LEVEL=warn', () => {
+    process.env.LOG_LEVEL = 'warn'
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const logger = createLogger('heediq-api')
+    logger.info('lifecycle event')
+    logger.warn('careful')
+    expect(logSpy).not.toHaveBeenCalled()
+    expect(warnSpy).toHaveBeenCalledOnce()
+  })
+
+  it('falls back to info threshold on an invalid LOG_LEVEL value', () => {
+    process.env.LOG_LEVEL = 'verbose'
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    createLogger('heediq-api').info('lifecycle event')
+    expect(logSpy).toHaveBeenCalledOnce()
+  })
+})

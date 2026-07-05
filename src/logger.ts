@@ -6,6 +6,10 @@
 // Redaction is enforced here, not left to convention: 07-engineering-standards.md §2 forbids
 // logging PII (transcript text, emails, secrets), so any denylisted key is stripped before the
 // line is ever written rather than trusted to call sites.
+//
+// Level filtering (D-093): default threshold is `info` in every environment — `debug` is the only
+// level silent by default. Read once at import/cold-start from LOG_LEVEL so ops can flip a single
+// Lambda to `debug` via env var with no redeploy, then flip back.
 
 const REDACTED = '[REDACTED]'
 
@@ -20,7 +24,14 @@ const DENYLIST = [
   'authorization',
 ] as const
 
-type LogLevel = 'info' | 'warn' | 'error'
+type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+
+const LEVEL_ORDER: Record<LogLevel, number> = { debug: 0, info: 1, warn: 2, error: 3 }
+
+function resolveThreshold(): LogLevel {
+  const raw = process.env.LOG_LEVEL?.toLowerCase()
+  return raw === 'debug' || raw === 'info' || raw === 'warn' || raw === 'error' ? raw : 'info'
+}
 
 export interface LogMeta {
   sourceId?: string
@@ -29,6 +40,7 @@ export interface LogMeta {
 }
 
 export interface StructuredLogger {
+  debug: (message: string, meta?: LogMeta) => void
   info: (message: string, meta?: LogMeta) => void
   warn: (message: string, meta?: LogMeta) => void
   error: (message: string, meta?: LogMeta) => void
@@ -53,7 +65,15 @@ function redact(value: unknown): unknown {
   return value
 }
 
+const CONSOLE_METHOD: Record<LogLevel, 'debug' | 'log' | 'warn' | 'error'> = {
+  debug: 'debug',
+  info: 'log',
+  warn: 'warn',
+  error: 'error',
+}
+
 function write(service: string, level: LogLevel, message: string, meta?: LogMeta): void {
+  if (LEVEL_ORDER[level] < LEVEL_ORDER[resolveThreshold()]) return
   const line = {
     timestamp: new Date().toISOString(),
     level,
@@ -62,11 +82,12 @@ function write(service: string, level: LogLevel, message: string, meta?: LogMeta
     ...(meta ? (redact(meta) as object) : {}),
   }
   // eslint-disable-next-line no-console
-  console[level === 'info' ? 'log' : level](JSON.stringify(line))
+  console[CONSOLE_METHOD[level]](JSON.stringify(line))
 }
 
 export function createLogger(service: string): StructuredLogger {
   return {
+    debug: (message, meta) => write(service, 'debug', message, meta),
     info: (message, meta) => write(service, 'info', message, meta),
     warn: (message, meta) => write(service, 'warn', message, meta),
     error: (message, meta) => write(service, 'error', message, meta),
