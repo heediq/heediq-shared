@@ -87,4 +87,3 @@ This grants `GITHUB_TOKEN` in that repo's CI the right to `pnpm install @heediq/
 - `module: NodeNext` + `.js` extensions required in imports — TypeScript ESM with NodeNext resolution.
 - `allowBuilds.esbuild: true` in `pnpm-workspace.yaml` — required by vitest's bundler.
 - Publish runs on `main` only. Bump `version` in `package.json` before merging to `main`.
-- CI 403 on install = consuming repo not added to package access (see First-time setup above).
