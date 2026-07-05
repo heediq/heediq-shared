@@ -12,7 +12,7 @@ Published as a private package to GitHub Packages (`@heediq/shared`). Consuming 
 
 - `src/enums.ts` — `Tier`, `WhisperModel`, `JobStatus`, `SourceStatus`, `OrgRole`, `SourceType`
 - `src/domain.ts` — `Org`, `User`, `Source`, `Job`, `Summary` domain schemas
-- `src/requests.ts` — API request/response schemas (`CreateSourceRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, etc.)
+- `src/requests.ts` — API request/response schemas (`CreateSourceRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, `AuthMethodSchema`/`ListAuthMethodsResponseSchema`, etc.)
 - `src/messages.ts` — SQS message schemas (`TranscriptionJobMessage`, `SummarizationJobMessage`) and WebSocket push schema (`WsStatusMessage`)
 - `src/api.ts` — `ApiSuccess<T>` / `ApiError` response envelope types
 - `src/index.ts` — re-exports everything
@@ -39,7 +39,10 @@ this package — see `DECISIONS.md` D-068/D-069.
 
 ## Versioning
 
-Current version: `0.3.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.4.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.4.0 additive change (D-091):** new `AuthMethodSchema`/`ListAuthMethodsResponseSchema` in
+`requests.ts` for `GET /api/v1/auth/methods` (lists a user's active sign-in methods). Non-breaking.
 
 **0.3.0 additive change (D-078):** `UserSchema` gains `passwordSet: boolean` (defaults `true` so
 existing rows parse unchanged); new request/response schemas `LookupEmailRequest/Response`,
@@ -63,7 +66,7 @@ pnpm typecheck     # tsc --noEmit
 pnpm build         # emit to dist/
 ```
 
-58 unit tests covering valid + invalid inputs for every schema.
+63 unit tests covering valid + invalid inputs for every schema.
 
 ## First-time setup for consuming repos
 
