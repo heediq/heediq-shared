@@ -15,6 +15,7 @@ Published as a private package to GitHub Packages (`@heediq/shared`). Consuming 
 - `src/requests.ts` — API request/response schemas (`CreateSourceRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, `AuthMethodSchema`/`ListAuthMethodsResponseSchema`, etc.)
 - `src/messages.ts` — SQS message schemas (`TranscriptionJobMessage`, `SummarizationJobMessage`) and WebSocket push schema (`WsStatusMessage`)
 - `src/api.ts` — `ApiSuccess<T>` / `ApiError` response envelope types
+- `src/logger.ts` — `createLogger(service)` structured JSON logger with correlation fields (`sourceId`/`requestId`) and a recursive PII-redaction denylist (D-085)
 - `src/index.ts` — re-exports everything
 
 ## Contracts
@@ -39,7 +40,13 @@ this package — see `DECISIONS.md` D-068/D-069.
 
 ## Versioning
 
-Current version: `0.4.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.5.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.5.0 additive change (D-085):** new `createLogger(service)` in `logger.ts` — structured JSON
+logs (`{ timestamp, level, service, message, ...meta }`), correlated by `sourceId` (once a job
+exists) or a per-request `requestId`, with a case-insensitive substring denylist
+(`transcript`, `email`, `audioUrl`, `password`, `token`, `secret`, `authorization`) applied
+recursively to redact PII from log metadata. Non-breaking.
 
 **0.4.0 additive change (D-091):** new `AuthMethodSchema`/`ListAuthMethodsResponseSchema` in
 `requests.ts` for `GET /api/v1/auth/methods` (lists a user's active sign-in methods). Non-breaking.
