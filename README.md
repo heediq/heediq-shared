@@ -15,6 +15,7 @@ Published as a private package to GitHub Packages (`@heediq/shared`). Consuming 
 - `src/requests.ts` — API request/response schemas (`CreateSourceRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, `AuthMethodSchema`/`ListAuthMethodsResponseSchema`, etc.)
 - `src/messages.ts` — SQS message schemas (`TranscriptionJobMessage`, `SummarizationJobMessage`) and WebSocket push schema (`WsStatusMessage`)
 - `src/api.ts` — `ApiSuccess<T>` / `ApiError` response envelope types
+- `src/logger.ts` — `createLogger(service)` structured JSON logger with correlation fields (`sourceId`/`requestId`), a recursive PII-redaction denylist (D-085), and a `LOG_LEVEL`-gated `debug`/`info`/`warn`/`error` threshold, default `info` (D-093)
 - `src/index.ts` — re-exports everything
 
 ## Contracts
@@ -39,7 +40,18 @@ this package — see `DECISIONS.md` D-068/D-069.
 
 ## Versioning
 
-Current version: `0.4.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.6.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.6.0 additive change (D-093):** `createLogger(service)` gains a `debug` level and a `LOG_LEVEL`
+env-var threshold (`debug < info < warn < error`, default `info`, invalid values fall back to
+`info`) — logger usage is now mandatory for every service, `debug` is silent unless `LOG_LEVEL=debug`
+is set, letting ops get verbose output on one Lambda via an env-var flip with no redeploy. Non-breaking.
+
+**0.5.0 additive change (D-085):** new `createLogger(service)` in `logger.ts` — structured JSON
+logs (`{ timestamp, level, service, message, ...meta }`), correlated by `sourceId` (once a job
+exists) or a per-request `requestId`, with a case-insensitive substring denylist
+(`transcript`, `email`, `audioUrl`, `password`, `token`, `secret`, `authorization`) applied
+recursively to redact PII from log metadata. Non-breaking.
 
 **0.4.0 additive change (D-091):** new `AuthMethodSchema`/`ListAuthMethodsResponseSchema` in
 `requests.ts` for `GET /api/v1/auth/methods` (lists a user's active sign-in methods). Non-breaking.
