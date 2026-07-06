@@ -6,6 +6,7 @@ import {
   PresignUploadRequestSchema,
   LookupEmailRequestSchema,
   LookupEmailResponseSchema,
+  LinkVerifyOtpRequestSchema,
   LinkConfirmRequestSchema,
   LinkAddProviderRequestSchema,
   AuthMethodSchema,
@@ -74,12 +75,22 @@ describe('LookupEmailRequestSchema / LookupEmailResponseSchema (D-078)', () => {
   })
 })
 
-describe('LinkConfirmRequestSchema (D-078)', () => {
+describe('LinkVerifyOtpRequestSchema (D-089)', () => {
+  it('rejects an empty code', () => {
+    expect(() => LinkVerifyOtpRequestSchema.parse({ email: 'a@b.com', code: '' })).toThrow()
+  })
+  it('accepts a valid verify-otp request', () => {
+    expect(LinkVerifyOtpRequestSchema.parse({ email: 'a@b.com', code: '123456' }))
+      .toMatchObject({ email: 'a@b.com', code: '123456' })
+  })
+})
+
+describe('LinkConfirmRequestSchema (D-078, D-089)', () => {
   it('rejects a password under 8 chars', () => {
-    expect(() => LinkConfirmRequestSchema.parse({ email: 'a@b.com', code: '123456', newPassword: 'short' })).toThrow()
+    expect(() => LinkConfirmRequestSchema.parse({ email: 'a@b.com', newPassword: 'short' })).toThrow()
   })
   it('accepts a valid confirm request', () => {
-    expect(LinkConfirmRequestSchema.parse({ email: 'a@b.com', code: '123456', newPassword: 'longenough1' }))
+    expect(LinkConfirmRequestSchema.parse({ email: 'a@b.com', newPassword: 'longenough1' }))
       .toMatchObject({ email: 'a@b.com' })
   })
 })
