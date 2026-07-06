@@ -16,6 +16,7 @@ Published as a private package to GitHub Packages (`@heediq/shared`). Consuming 
 - `src/messages.ts` — SQS message schemas (`TranscriptionJobMessage`, `SummarizationJobMessage`) and WebSocket push schema (`WsStatusMessage`)
 - `src/api.ts` — `ApiSuccess<T>` / `ApiError` response envelope types
 - `src/logger.ts` — `createLogger(service)` structured JSON logger with correlation fields (`sourceId`/`requestId`), a recursive PII-redaction denylist (D-085), and a `LOG_LEVEL`-gated `debug`/`info`/`warn`/`error` threshold, default `info` (D-093)
+- `src/passwordPolicy.ts` — `PASSWORD_POLICY`, `PASSWORD_POLICY_RULES`, `isPasswordPolicyCompliant()`: single source of truth for password rules, consumed by heediq-api and heediq-web. The Cognito User Pool's `passwordPolicy` in heediq-infra is a separate literal kept in sync via the periodic consistency-check, not by import — see `DECISIONS.md` D-020 and `rules/10-consistency-check.md`.
 - `src/index.ts` — re-exports everything
 
 ## Contracts
@@ -40,7 +41,12 @@ this package — see `DECISIONS.md` D-068/D-069.
 
 ## Versioning
 
-Current version: `0.6.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.7.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.7.0 additive change:** new `passwordPolicy.ts` (`PASSWORD_POLICY`, `PASSWORD_POLICY_RULES`,
+`isPasswordPolicyCompliant()`) — single source of truth for password rules for heediq-api and
+heediq-web, so a live "does this password meet requirements" UI checklist can't silently drift
+from the backend's understanding of the same rules. Non-breaking.
 
 **0.6.0 additive change (D-093):** `createLogger(service)` gains a `debug` level and a `LOG_LEVEL`
 env-var threshold (`debug < info < warn < error`, default `info`, invalid values fall back to
