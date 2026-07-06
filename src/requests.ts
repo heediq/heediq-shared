@@ -54,9 +54,16 @@ export const LinkStartRequestSchema = z.object({
 })
 export type LinkStartRequest = z.infer<typeof LinkStartRequestSchema>
 
-export const LinkConfirmRequestSchema = z.object({
+// Verifies the emailed code on its own, before any password is collected (D-089's two-step
+// flow) — `code` is consumed here via Cognito's ConfirmSignUp, so it is never sent again.
+export const LinkVerifyOtpRequestSchema = z.object({
   email: z.string().email(),
   code: z.string().min(1),
+})
+export type LinkVerifyOtpRequest = z.infer<typeof LinkVerifyOtpRequestSchema>
+
+export const LinkConfirmRequestSchema = z.object({
+  email: z.string().email(),
   newPassword: z.string().min(8),
 })
 export type LinkConfirmRequest = z.infer<typeof LinkConfirmRequestSchema>
