@@ -41,7 +41,12 @@ this package — see `DECISIONS.md` D-068/D-069.
 
 ## Versioning
 
-Current version: `0.7.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.8.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.8.0 breaking change:** `link/confirm`'s OTP code moved into its own `LinkVerifyOtpRequestSchema`
+(used by `POST /auth/link/verify-otp`) and was removed from `LinkConfirmRequestSchema` — `verify-otp`
+now confirms the code on its own before `confirm` ever sets a password, so the code is checked before
+the caller can proceed to the password step.
 
 **0.7.0 additive change:** new `passwordPolicy.ts` (`PASSWORD_POLICY`, `PASSWORD_POLICY_RULES`,
 `isPasswordPolicyCompliant()`) — single source of truth for password rules for heediq-api and
@@ -84,7 +89,7 @@ pnpm typecheck     # tsc --noEmit
 pnpm build         # emit to dist/
 ```
 
-79 unit tests covering valid + invalid inputs for every schema.
+81 unit tests covering valid + invalid inputs for every schema.
 
 ## First-time setup for consuming repos
 
