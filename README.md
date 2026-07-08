@@ -13,8 +13,8 @@ Published as a private package to GitHub Packages (`@heediq/shared`). Consuming 
 - `src/enums.ts` — `Tier`, `WhisperModel`, `JobStatus`, `SourceStatus`, `OrgRole`, `SourceType`
 - `src/domain.ts` — `Org`, `User`, `Source`, `Job`, `Summary` domain schemas
 - `src/permissions.ts` — RBAC permission catalog (D-102): `PERMISSIONS`/`Permission`, `SYSTEM_ROLES`, `DEFAULT_ORG_RBAC_SEED`, and `Role`/`Group`/`RoleAssignment` domain schemas
-- `src/audit.ts` — RBAC audit trail (D-102): `AuditPayloadMap` (per-resource-type `before`/`after` payload shapes) and `AuditLogEntrySchema`
-- `src/requests.ts` — API request/response schemas (`CreateSourceRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, `AuthMethodSchema`/`ListAuthMethodsResponseSchema`, etc.)
+- `src/audit.ts` — RBAC audit trail (D-102): `AuditPayloadMap` (per-resource-type `before`/`after` payload shapes), `AuditLogEntrySchema`, and `buildAuditLogEntry()` (pure builder — fills `eventId`/`timestamp`, validates the entry; no AWS SDK dependency, the actual write lives in the consuming service)
+- `src/requests.ts` — API request/response schemas (`CreateSourceRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, `AuthMethodSchema`/`ListAuthMethodsResponseSchema`, RBAC write-request schemas for roles/groups/role-assignments (D-102), etc.)
 - `src/messages.ts` — SQS message schemas (`TranscriptionJobMessage`, `SummarizationJobMessage`) and WebSocket push schema (`WsStatusMessage`)
 - `src/api.ts` — `ApiSuccess<T>` / `ApiError` response envelope types
 - `src/logger.ts` — `createLogger(service)` structured JSON logger with correlation fields (`sourceId`/`requestId`), a recursive PII-redaction denylist (D-085), and a `LOG_LEVEL`-gated `debug`/`info`/`warn`/`error` threshold, default `info` (D-093)
@@ -43,15 +43,23 @@ this package — see `DECISIONS.md` D-068/D-069.
 
 ## Versioning
 
-Current version: `0.9.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.10.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.10.0 additive change (D-102, Phase 2 of the RBAC & audit trail build-out):** `requests.ts` gains
+`CreateRoleRequestSchema`/`UpdateRoleRequestSchema`, `CreateGroupRequestSchema`/
+`UpdateGroupRequestSchema`, and `CreateRoleAssignmentRequestSchema` (validates `heediq-api`'s new
+RBAC write endpoints at the boundary); `audit.ts` gains `buildAuditLogEntry()`, a pure builder
+(fills `eventId`/`timestamp`, validates via `AuditLogEntrySchema`) with zero AWS SDK dependency —
+the actual DynamoDB write lives in each consuming service (`heediq-api`'s `writeAuditEvent()`).
+Consumed by `heediq-api`'s `routes/roles.ts`/`groups.ts`/`role-assignments.ts` and `lib/audit.ts`.
+Non-breaking.
 
 **0.9.0 additive change (D-102, Phase 1 of the RBAC & audit trail build-out):** new `permissions.ts`
 (`PERMISSIONS`/`Permission` catalog, `SYSTEM_ROLES`, `DEFAULT_ORG_RBAC_SEED`, `Role`/`Group`/
 `RoleAssignment` schemas) and `audit.ts` (`AuditPayloadMap`, `AuditLogEntrySchema`) — the shared
 contract for the dynamic per-org RBAC framework and unified audit trail replacing D-017's fixed
 Admin/Member model. `OrgSchema` gains an optional `defaultRoleId` field. No existing schema
-changed shape; nothing consumes these new exports yet — `heediq-api` wiring lands in Phase 2/3.
-Non-breaking.
+changed shape. Non-breaking.
 
 **0.8.0 breaking change:** `link/confirm`'s OTP code moved into its own `LinkVerifyOtpRequestSchema`
 (used by `POST /auth/link/verify-otp`) and was removed from `LinkConfirmRequestSchema` — `verify-otp`
