@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { AuditLogEntrySchema } from '../audit.js'
+import { AuditLogEntrySchema, buildAuditLogEntry } from '../audit.js'
 
 const now = new Date().toISOString()
 const uuid = '00000000-0000-0000-0000-000000000001'
@@ -67,6 +67,50 @@ describe('AuditLogEntrySchema', () => {
   it('rejects an invalid actorEmail', () => {
     expect(() =>
       AuditLogEntrySchema.parse({ ...envelope, actorEmail: 'not-an-email', resourceType: 'role' as const }),
+    ).toThrow()
+  })
+})
+
+describe('buildAuditLogEntry', () => {
+  it('fills eventId and timestamp and produces a schema-valid entry', () => {
+    const entry = buildAuditLogEntry({
+      orgId: uuid,
+      resourceType: 'role',
+      action: 'role:create',
+      actorUserId: 'u1',
+      actorEmail: 'admin@acme.com',
+      after: { roleId: uuid, name: 'Reviewer', permissions: ['sources:read-own'] },
+    })
+    expect(entry.eventId).toMatch(/^[0-9a-f-]{36}$/)
+    expect(entry.timestamp).toBe(new Date(entry.timestamp).toISOString())
+    expect(AuditLogEntrySchema.parse(entry)).toMatchObject({ resourceType: 'role', action: 'role:create' })
+  })
+
+  it('generates a distinct eventId on every call (no accidental reuse across events)', () => {
+    const input = {
+      orgId: uuid,
+      resourceType: 'group' as const,
+      action: 'group:create',
+      actorUserId: 'u1',
+      actorEmail: 'admin@acme.com',
+      after: { groupId: uuid, name: 'Engineering', roleIds: [uuid] },
+    }
+    const first = buildAuditLogEntry(input)
+    const second = buildAuditLogEntry(input)
+    expect(first.eventId).not.toBe(second.eventId)
+  })
+
+  it('rejects a payload shape that does not match the given resourceType', () => {
+    expect(() =>
+      buildAuditLogEntry({
+        orgId: uuid,
+        resourceType: 'role',
+        action: 'role:create',
+        actorUserId: 'u1',
+        actorEmail: 'admin@acme.com',
+        // @ts-expect-error deliberately wrong payload shape for 'role'
+        after: { sourceId: uuid, title: 'Kickoff call', ownerEmail: 'user@acme.com' },
+      }),
     ).toThrow()
   })
 })
