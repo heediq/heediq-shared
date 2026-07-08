@@ -8,8 +8,8 @@
 // line is ever written rather than trusted to call sites.
 //
 // Level filtering (D-093): default threshold is `info` in every environment — `debug` is the only
-// level silent by default. Read once at import/cold-start from LOG_LEVEL so ops can flip a single
-// Lambda to `debug` via env var with no redeploy, then flip back.
+// level silent by default. The LOG_LEVEL env var is read on each write (cheap env lookup, matches
+// the Python mirror) so ops can flip a single Lambda to `debug` with no redeploy, then flip back.
 
 const REDACTED = '[REDACTED]'
 
