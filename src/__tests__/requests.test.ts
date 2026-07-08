@@ -11,6 +11,11 @@ import {
   LinkAddProviderRequestSchema,
   AuthMethodSchema,
   ListAuthMethodsResponseSchema,
+  CreateRoleRequestSchema,
+  UpdateRoleRequestSchema,
+  CreateGroupRequestSchema,
+  UpdateGroupRequestSchema,
+  CreateRoleAssignmentRequestSchema,
 } from '../requests.js'
 
 const uuid = '00000000-0000-0000-0000-000000000001'
@@ -125,5 +130,81 @@ describe('AuthMethodSchema / ListAuthMethodsResponseSchema (D-091)', () => {
         methods: [{ provider: 'Google', linkedAt: '2026-07-04T00:00:00.000Z' }],
       }),
     ).toMatchObject({ methods: [{ provider: 'Google' }] })
+  })
+})
+
+describe('CreateRoleRequestSchema (D-102 Phase 2)', () => {
+  it('accepts a valid request', () => {
+    expect(CreateRoleRequestSchema.parse({ name: 'Reviewer', permissions: ['sources:read'] }))
+      .toMatchObject({ name: 'Reviewer', permissions: ['sources:read'] })
+  })
+  it('accepts an empty permissions array', () => {
+    expect(CreateRoleRequestSchema.parse({ name: 'No-op role', permissions: [] }))
+      .toMatchObject({ permissions: [] })
+  })
+  it('rejects an empty name', () => {
+    expect(() => CreateRoleRequestSchema.parse({ name: '', permissions: [] })).toThrow()
+  })
+  it('rejects an unknown permission', () => {
+    expect(() => CreateRoleRequestSchema.parse({ name: 'Reviewer', permissions: ['sources:fly'] })).toThrow()
+  })
+})
+
+describe('UpdateRoleRequestSchema (D-102 Phase 2)', () => {
+  it('accepts a partial update (name only)', () => {
+    expect(UpdateRoleRequestSchema.parse({ name: 'Renamed' })).toMatchObject({ name: 'Renamed' })
+  })
+  it('accepts a partial update (permissions only)', () => {
+    expect(UpdateRoleRequestSchema.parse({ permissions: ['audit:read'] }))
+      .toMatchObject({ permissions: ['audit:read'] })
+  })
+  it('rejects an empty object', () => {
+    expect(() => UpdateRoleRequestSchema.parse({})).toThrow()
+  })
+})
+
+describe('CreateGroupRequestSchema (D-102 Phase 2)', () => {
+  it('accepts a valid request', () => {
+    expect(CreateGroupRequestSchema.parse({ name: 'Engineering', roleIds: [uuid] }))
+      .toMatchObject({ name: 'Engineering', roleIds: [uuid] })
+  })
+  it('accepts an empty roleIds array', () => {
+    expect(CreateGroupRequestSchema.parse({ name: 'Empty group', roleIds: [] }))
+      .toMatchObject({ roleIds: [] })
+  })
+  it('rejects a non-uuid roleId', () => {
+    expect(() => CreateGroupRequestSchema.parse({ name: 'Engineering', roleIds: ['not-a-uuid'] })).toThrow()
+  })
+})
+
+describe('UpdateGroupRequestSchema (D-102 Phase 2)', () => {
+  it('accepts a partial update (name only)', () => {
+    expect(UpdateGroupRequestSchema.parse({ name: 'Renamed' })).toMatchObject({ name: 'Renamed' })
+  })
+  it('accepts a partial update (roleIds only)', () => {
+    expect(UpdateGroupRequestSchema.parse({ roleIds: [uuid] })).toMatchObject({ roleIds: [uuid] })
+  })
+  it('rejects an empty object', () => {
+    expect(() => UpdateGroupRequestSchema.parse({})).toThrow()
+  })
+})
+
+describe('CreateRoleAssignmentRequestSchema (D-102 Phase 2)', () => {
+  it('accepts a role assignment', () => {
+    expect(CreateRoleAssignmentRequestSchema.parse({ assignmentType: 'role', roleId: uuid }))
+      .toMatchObject({ assignmentType: 'role', roleId: uuid })
+  })
+  it('accepts a group assignment', () => {
+    expect(CreateRoleAssignmentRequestSchema.parse({ assignmentType: 'group', groupId: uuid }))
+      .toMatchObject({ assignmentType: 'group', groupId: uuid })
+  })
+  it('rejects a role assignment missing roleId', () => {
+    expect(() => CreateRoleAssignmentRequestSchema.parse({ assignmentType: 'role' })).toThrow()
+  })
+  it('rejects an unknown assignmentType', () => {
+    expect(() => CreateRoleAssignmentRequestSchema.parse({ assignmentType: 'user', userId: uuid })).toThrow()
+  })
+  it('rejects mismatched discriminant fields (role type carrying groupId)', () => {
+    expect(() => CreateRoleAssignmentRequestSchema.parse({ assignmentType: 'role', groupId: uuid })).toThrow()
   })
 })

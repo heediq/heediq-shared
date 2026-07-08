@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { PermissionSchema } from './permissions.js'
 
@@ -79,3 +80,33 @@ export const AuditLogEntrySchema = z.discriminatedUnion('resourceType', [
   z.object({ ...auditEnvelope, resourceType: z.literal('auth'), before: AuthAuditPayloadSchema.optional(), after: AuthAuditPayloadSchema.optional() }),
 ])
 export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>
+
+// Pure builder — constructs and validates an entry (fills eventId/timestamp), but never writes
+// it. heediq-shared carries zero AWS SDK dependencies (schema/logic only); the actual DynamoDB
+// PutCommand lives in each consuming service (e.g. heediq-api's `writeAuditEvent`), matching
+// where every other DynamoDB access already lives.
+export interface BuildAuditLogEntryInput<T extends AuditResourceType> {
+  orgId: string
+  resourceType: T
+  action: string
+  actorUserId: string
+  actorEmail: string
+  before?: AuditPayloadMap[T]
+  after?: AuditPayloadMap[T]
+}
+
+export function buildAuditLogEntry<T extends AuditResourceType>(
+  input: BuildAuditLogEntryInput<T>,
+): AuditLogEntry {
+  return AuditLogEntrySchema.parse({
+    orgId: input.orgId,
+    eventId: randomUUID(),
+    timestamp: new Date().toISOString(),
+    actorUserId: input.actorUserId,
+    actorEmail: input.actorEmail,
+    action: input.action,
+    resourceType: input.resourceType,
+    before: input.before,
+    after: input.after,
+  })
+}
