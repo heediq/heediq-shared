@@ -69,7 +69,7 @@ export type Group = z.infer<typeof GroupSchema>
 
 // A user's effective permissions = union of every role reached via a direct assignment or via
 // group membership (no deny rules). One row per assignment; `heediq-role-assignments`
-// (`pk=USER#<accountId>`) stores both variants distinguished by `sk` prefix (`ROLE#`/`GROUP#`).
+// (`pk=ORG#<orgId>#USER#<userId>`) stores both variants distinguished by `sk` prefix (`ROLE#`/`GROUP#`).
 export const RoleAssignmentSchema = z.discriminatedUnion('assignmentType', [
   z.object({
     assignmentType: z.literal('role'),

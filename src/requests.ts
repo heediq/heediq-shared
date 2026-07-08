@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { WhisperModelSchema } from './enums.js'
+import { PermissionSchema } from './permissions.js'
 
 export const CreateSourceRequestSchema = z.object({
   title: z.string().min(1).max(255),
@@ -89,3 +90,41 @@ export const ListAuthMethodsResponseSchema = z.object({
   methods: z.array(AuthMethodSchema),
 })
 export type ListAuthMethodsResponse = z.infer<typeof ListAuthMethodsResponseSchema>
+
+// ── RBAC & audit trail (D-102 Phase 2) ──────────────────────────────────────
+
+export const CreateRoleRequestSchema = z.object({
+  name: z.string().min(1).max(100),
+  permissions: z.array(PermissionSchema),
+})
+export type CreateRoleRequest = z.infer<typeof CreateRoleRequestSchema>
+
+export const UpdateRoleRequestSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  permissions: z.array(PermissionSchema).optional(),
+}).refine((v) => Object.keys(v).length > 0, {
+  message: 'At least one field required',
+})
+export type UpdateRoleRequest = z.infer<typeof UpdateRoleRequestSchema>
+
+export const CreateGroupRequestSchema = z.object({
+  name: z.string().min(1).max(100),
+  roleIds: z.array(z.string().uuid()),
+})
+export type CreateGroupRequest = z.infer<typeof CreateGroupRequestSchema>
+
+export const UpdateGroupRequestSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  roleIds: z.array(z.string().uuid()).optional(),
+}).refine((v) => Object.keys(v).length > 0, {
+  message: 'At least one field required',
+})
+export type UpdateGroupRequest = z.infer<typeof UpdateGroupRequestSchema>
+
+// Target userId comes from the route path (`/org/users/:userId/role-assignments`); createdAt is
+// server-generated at write time — neither is part of the request body.
+export const CreateRoleAssignmentRequestSchema = z.discriminatedUnion('assignmentType', [
+  z.object({ assignmentType: z.literal('role'), roleId: z.string().uuid() }),
+  z.object({ assignmentType: z.literal('group'), groupId: z.string().uuid() }),
+])
+export type CreateRoleAssignmentRequest = z.infer<typeof CreateRoleAssignmentRequestSchema>
