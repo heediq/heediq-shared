@@ -14,6 +14,10 @@ export const OrgSchema = z.object({
   seatCount: z.number().int().positive(),
   usageLifetimeCount: z.number().int().min(0),
   createdAt: z.string().datetime(),
+  // Role assigned to new members at provisioning (D-102) — points at this org's seeded `member`
+  // system role. Optional: existing org rows predate RBAC and won't have it until Phase 3
+  // provisioning backfills it.
+  defaultRoleId: z.string().uuid().optional(),
 })
 export type Org = z.infer<typeof OrgSchema>
 
