@@ -15,6 +15,12 @@ describe('OrgSchema', () => {
   it('rejects negative seatCount', () => {
     expect(() => OrgSchema.parse({ ...valid, seatCount: 0 })).toThrow()
   })
+  it('parses without defaultRoleId (pre-RBAC org rows)', () => {
+    expect(OrgSchema.parse(valid).defaultRoleId).toBeUndefined()
+  })
+  it('accepts an explicit defaultRoleId', () => {
+    expect(OrgSchema.parse({ ...valid, defaultRoleId: uuid }).defaultRoleId).toBe(uuid)
+  })
 })
 
 describe('UserSchema', () => {

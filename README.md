@@ -12,6 +12,8 @@ Published as a private package to GitHub Packages (`@heediq/shared`). Consuming 
 
 - `src/enums.ts` — `Tier`, `WhisperModel`, `JobStatus`, `SourceStatus`, `OrgRole`, `SourceType`
 - `src/domain.ts` — `Org`, `User`, `Source`, `Job`, `Summary` domain schemas
+- `src/permissions.ts` — RBAC permission catalog (D-102): `PERMISSIONS`/`Permission`, `SYSTEM_ROLES`, `DEFAULT_ORG_RBAC_SEED`, and `Role`/`Group`/`RoleAssignment` domain schemas
+- `src/audit.ts` — RBAC audit trail (D-102): `AuditPayloadMap` (per-resource-type `before`/`after` payload shapes) and `AuditLogEntrySchema`
 - `src/requests.ts` — API request/response schemas (`CreateSourceRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, `AuthMethodSchema`/`ListAuthMethodsResponseSchema`, etc.)
 - `src/messages.ts` — SQS message schemas (`TranscriptionJobMessage`, `SummarizationJobMessage`) and WebSocket push schema (`WsStatusMessage`)
 - `src/api.ts` — `ApiSuccess<T>` / `ApiError` response envelope types
@@ -41,7 +43,20 @@ this package — see `DECISIONS.md` D-068/D-069.
 
 ## Versioning
 
-Current version: `0.7.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.9.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.9.0 additive change (D-102, Phase 1 of the RBAC & audit trail build-out):** new `permissions.ts`
+(`PERMISSIONS`/`Permission` catalog, `SYSTEM_ROLES`, `DEFAULT_ORG_RBAC_SEED`, `Role`/`Group`/
+`RoleAssignment` schemas) and `audit.ts` (`AuditPayloadMap`, `AuditLogEntrySchema`) — the shared
+contract for the dynamic per-org RBAC framework and unified audit trail replacing D-017's fixed
+Admin/Member model. `OrgSchema` gains an optional `defaultRoleId` field. No existing schema
+changed shape; nothing consumes these new exports yet — `heediq-api` wiring lands in Phase 2/3.
+Non-breaking.
+
+**0.8.0 breaking change:** `link/confirm`'s OTP code moved into its own `LinkVerifyOtpRequestSchema`
+(used by `POST /auth/link/verify-otp`) and was removed from `LinkConfirmRequestSchema` — `verify-otp`
+now confirms the code on its own before `confirm` ever sets a password, so the code is checked before
+the caller can proceed to the password step.
 
 **0.7.0 additive change:** new `passwordPolicy.ts` (`PASSWORD_POLICY`, `PASSWORD_POLICY_RULES`,
 `isPasswordPolicyCompliant()`) — single source of truth for password rules for heediq-api and
@@ -84,7 +99,7 @@ pnpm typecheck     # tsc --noEmit
 pnpm build         # emit to dist/
 ```
 
-79 unit tests covering valid + invalid inputs for every schema.
+81 unit tests covering valid + invalid inputs for every schema.
 
 ## First-time setup for consuming repos
 
