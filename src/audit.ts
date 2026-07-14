@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { PermissionSchema } from './permissions.js'
+import { OrgRoleSchema } from './enums.js'
 
 // `before`/`after` snapshots are resource-type-specific, human-readable, and resolved by the
 // calling handler at write time — never a raw DB row (D-102). This keeps entries self-contained
@@ -59,13 +60,18 @@ export interface AuditPayloadMap {
 }
 export type AuditResourceType = keyof AuditPayloadMap
 
-// Common envelope shared by every audit entry, regardless of resource type.
+// Common envelope shared by every audit entry, regardless of resource type. actorRole is the
+// actor's system role (admin/member, D-102) at the moment of the action, taken straight from the
+// JWT — cheap because it's already in AuthContext, unlike group membership which isn't baked into
+// the token today (D-105) and was deliberately left off this envelope to avoid an extra DynamoDB
+// read on every audit write; revisit if the audit viewer later needs it.
 const auditEnvelope = {
   orgId: z.string().uuid(),
   eventId: z.string().uuid(),
   timestamp: z.string().datetime(),
   actorUserId: z.string(),
   actorEmail: z.string().email(),
+  actorRole: OrgRoleSchema,
   action: z.string().min(1),
 }
 
@@ -91,6 +97,7 @@ export interface BuildAuditLogEntryInput<T extends AuditResourceType> {
   action: string
   actorUserId: string
   actorEmail: string
+  actorRole: z.infer<typeof OrgRoleSchema>
   before?: AuditPayloadMap[T]
   after?: AuditPayloadMap[T]
 }
@@ -104,6 +111,7 @@ export function buildAuditLogEntry<T extends AuditResourceType>(
     timestamp: new Date().toISOString(),
     actorUserId: input.actorUserId,
     actorEmail: input.actorEmail,
+    actorRole: input.actorRole,
     action: input.action,
     resourceType: input.resourceType,
     before: input.before,

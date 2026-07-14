@@ -6,7 +6,7 @@ const uuid = '00000000-0000-0000-0000-000000000001'
 const uuid2 = '00000000-0000-0000-0000-000000000002'
 
 const envelope = {
-  orgId: uuid, eventId: uuid2, timestamp: now, actorUserId: 'u1', actorEmail: 'admin@acme.com', action: 'role:update',
+  orgId: uuid, eventId: uuid2, timestamp: now, actorUserId: 'u1', actorEmail: 'admin@acme.com', actorRole: 'admin' as const, action: 'role:update',
 }
 
 describe('AuditLogEntrySchema', () => {
@@ -64,6 +64,17 @@ describe('AuditLogEntrySchema', () => {
     expect(() => AuditLogEntrySchema.parse({ ...rest, resourceType: 'role' as const })).toThrow()
   })
 
+  it('rejects a missing actorRole', () => {
+    const { actorRole, ...rest } = envelope
+    expect(() => AuditLogEntrySchema.parse({ ...rest, resourceType: 'role' as const })).toThrow()
+  })
+
+  it('rejects an invalid actorRole', () => {
+    expect(() =>
+      AuditLogEntrySchema.parse({ ...envelope, actorRole: 'owner', resourceType: 'role' as const }),
+    ).toThrow()
+  })
+
   it('rejects an invalid actorEmail', () => {
     expect(() =>
       AuditLogEntrySchema.parse({ ...envelope, actorEmail: 'not-an-email', resourceType: 'role' as const }),
@@ -79,6 +90,7 @@ describe('buildAuditLogEntry', () => {
       action: 'role:create',
       actorUserId: 'u1',
       actorEmail: 'admin@acme.com',
+      actorRole: 'admin',
       after: { roleId: uuid, name: 'Reviewer', permissions: ['sources:read-own'] },
     })
     expect(entry.eventId).toMatch(/^[0-9a-f-]{36}$/)
@@ -93,6 +105,7 @@ describe('buildAuditLogEntry', () => {
       action: 'group:create',
       actorUserId: 'u1',
       actorEmail: 'admin@acme.com',
+      actorRole: 'admin' as const,
       after: { groupId: uuid, name: 'Engineering', roleIds: [uuid] },
     }
     const first = buildAuditLogEntry(input)
@@ -108,6 +121,7 @@ describe('buildAuditLogEntry', () => {
         action: 'role:create',
         actorUserId: 'u1',
         actorEmail: 'admin@acme.com',
+        actorRole: 'admin',
         // @ts-expect-error deliberately wrong payload shape for 'role'
         after: { sourceId: uuid, title: 'Kickoff call', ownerEmail: 'user@acme.com' },
       }),
