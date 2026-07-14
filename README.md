@@ -43,7 +43,7 @@ this package — see `DECISIONS.md` D-068/D-069.
 
 ## Versioning
 
-Current version: `0.9.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.11.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
 
 **0.9.0 additive change (D-102, Phase 1 of the RBAC & audit trail build-out):** new `permissions.ts`
 (`PERMISSIONS`/`Permission` catalog, `SYSTEM_ROLES`, `DEFAULT_ORG_RBAC_SEED`, `Role`/`Group`/
@@ -99,7 +99,7 @@ pnpm typecheck     # tsc --noEmit
 pnpm build         # emit to dist/
 ```
 
-81 unit tests covering valid + invalid inputs for every schema.
+130 unit tests across 8 files covering valid + invalid inputs for every schema.
 
 ## First-time setup for consuming repos
 
