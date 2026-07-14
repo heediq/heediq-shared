@@ -2,11 +2,9 @@ import { describe, it, expect } from 'vitest'
 import {
   TranscriptionJobMessageSchema,
   SummarizationJobMessageSchema,
-  WsStatusMessageSchema,
 } from '../messages.js'
 
 const uuid = '00000000-0000-0000-0000-000000000001'
-const now = new Date().toISOString()
 
 describe('TranscriptionJobMessageSchema', () => {
   const valid = {
@@ -39,22 +37,5 @@ describe('SummarizationJobMessageSchema', () => {
   it('rejects missing tier', () => {
     const { tier: _, ...noTier } = valid
     expect(() => SummarizationJobMessageSchema.parse(noTier)).toThrow()
-  })
-})
-
-describe('WsStatusMessageSchema', () => {
-  const valid = {
-    type: 'job_status' as const,
-    jobId: uuid, sourceId: uuid,
-    status: 'transcribing' as const, updatedAt: now,
-  }
-  it('parses valid status message', () => {
-    expect(WsStatusMessageSchema.parse(valid)).toMatchObject({ type: 'job_status', status: 'transcribing' })
-  })
-  it('rejects wrong type literal', () => {
-    expect(() => WsStatusMessageSchema.parse({ ...valid, type: 'status_update' })).toThrow()
-  })
-  it('rejects invalid status', () => {
-    expect(() => WsStatusMessageSchema.parse({ ...valid, status: 'unknown' })).toThrow()
   })
 })

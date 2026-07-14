@@ -15,7 +15,8 @@ Published as a private package to GitHub Packages (`@heediq/shared`). Consuming 
 - `src/permissions.ts` — RBAC permission catalog (D-102): `PERMISSIONS`/`Permission`, `SYSTEM_ROLES`, `DEFAULT_ORG_RBAC_SEED`, and `Role`/`Group`/`RoleAssignment` domain schemas
 - `src/audit.ts` — RBAC audit trail (D-102): `AuditPayloadMap` (per-resource-type `before`/`after` payload shapes) and `AuditLogEntrySchema`
 - `src/requests.ts` — API request/response schemas (`CreateSourceRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, `AuthMethodSchema`/`ListAuthMethodsResponseSchema`, etc.)
-- `src/messages.ts` — SQS message schemas (`TranscriptionJobMessage`, `SummarizationJobMessage`) and WebSocket push schema (`WsStatusMessage`)
+- `src/messages.ts` — SQS message schemas (`TranscriptionJobMessage`, `SummarizationJobMessage`)
+- `src/ws.ts` — generalized real-time WebSocket framework (D-109, supersedes D-061's one-off `WsStatusMessage`): `WsScopeSchema` (`user`/`org`/`broadcast`), `WsEventPayloadMap` (per-event-type payload registry — `job_status` is the first entry), `WsEventEnvelopeSchema` (discriminated on `type`), `buildWsEvent()`. Carries zero AWS SDK dependencies — the actual push call lives in `heediq-api/src/lib/wsPush.ts`.
 - `src/api.ts` — `ApiSuccess<T>` / `ApiError` response envelope types
 - `src/logger.ts` — `createLogger(service)` structured JSON logger with correlation fields (`sourceId`/`requestId`), a recursive PII-redaction denylist (D-085), and a `LOG_LEVEL`-gated `debug`/`info`/`warn`/`error` threshold, default `info` (D-093)
 - `src/passwordPolicy.ts` — `PASSWORD_POLICY`, `PASSWORD_POLICY_RULES`, `isPasswordPolicyCompliant()`: single source of truth for password rules, consumed by heediq-api and heediq-web. The Cognito User Pool's `passwordPolicy` in heediq-infra is a separate literal kept in sync via the periodic consistency-check, not by import — see `DECISIONS.md` D-020 and `rules/10-consistency-check.md`.
@@ -43,7 +44,14 @@ this package — see `DECISIONS.md` D-068/D-069.
 
 ## Versioning
 
-Current version: `0.9.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.12.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.12.0 breaking change (D-109):** `messages.ts`'s one-off `WsStatusMessageSchema` (D-061) replaced
+by `src/ws.ts`'s generic `WsEventEnvelopeSchema` + `WsEventPayloadMap` registry, so any future feature
+can push a real-time event (new `type` entry in the map) instead of growing a bespoke message shape.
+Addressing also generalized from a single per-resource scope to three reusable ones: `user`/`org`/
+`broadcast`. `job_status` is migrated as the first registry entry, unchanged in content. Consuming
+repos importing `WsStatusMessage` must switch to `buildWsEvent({ scope, type: 'job_status', payload })`.
 
 **0.9.0 additive change (D-102, Phase 1 of the RBAC & audit trail build-out):** new `permissions.ts`
 (`PERMISSIONS`/`Permission` catalog, `SYSTEM_ROLES`, `DEFAULT_ORG_RBAC_SEED`, `Role`/`Group`/
@@ -99,7 +107,7 @@ pnpm typecheck     # tsc --noEmit
 pnpm build         # emit to dist/
 ```
 
-81 unit tests covering valid + invalid inputs for every schema.
+138 unit tests across 9 files covering valid + invalid inputs for every schema.
 
 ## First-time setup for consuming repos
 

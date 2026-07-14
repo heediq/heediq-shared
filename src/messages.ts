@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { WhisperModelSchema, TierSchema, SourceTypeSchema, JobStatusSchema } from './enums.js'
+import { WhisperModelSchema, TierSchema, SourceTypeSchema } from './enums.js'
 
 // SQS message sent to heediq-transcription queue (D-023, D-059)
 export const TranscriptionJobMessageSchema = z.object({
@@ -26,12 +26,5 @@ export const SummarizationJobMessageSchema = z.object({
 })
 export type SummarizationJobMessage = z.infer<typeof SummarizationJobMessageSchema>
 
-// WebSocket push message (D-061) sent by status-pusher Lambda to connected clients
-export const WsStatusMessageSchema = z.object({
-  type: z.literal('job_status'),
-  jobId: z.string().uuid(),
-  sourceId: z.string().uuid(),
-  status: JobStatusSchema,
-  updatedAt: z.string().datetime(),
-})
-export type WsStatusMessage = z.infer<typeof WsStatusMessageSchema>
+// WebSocket push events (job_status and beyond) moved to ws.ts's generic envelope + registry
+// (D-109, generalizes D-061's one-off WsStatusMessageSchema).
