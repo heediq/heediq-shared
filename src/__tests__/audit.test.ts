@@ -46,6 +46,26 @@ describe('AuditLogEntrySchema', () => {
     expect(AuditLogEntrySchema.parse(entry)).toMatchObject({ resourceType: 'groupAssignment' })
   })
 
+  it('parses a permission-denial entry with effect=denied and an after-only payload (D-114)', () => {
+    const entry = {
+      ...envelope,
+      resourceType: 'permission' as const,
+      action: 'sources:delete',
+      effect: 'denied' as const,
+      after: { permission: 'sources:delete' },
+    }
+    expect(AuditLogEntrySchema.parse(entry)).toMatchObject({ resourceType: 'permission', effect: 'denied' })
+  })
+
+  it('defaults effect to permitted when omitted (pre-D-114 stored rows still parse)', () => {
+    const entry = {
+      ...envelope,
+      resourceType: 'role' as const,
+      after: { roleId: uuid, name: 'Reviewer', permissions: ['sources:read-own'] },
+    }
+    expect(AuditLogEntrySchema.parse(entry)).toMatchObject({ effect: 'permitted' })
+  })
+
   it('rejects a role resourceType carrying a source-shaped payload', () => {
     const entry = {
       ...envelope,
