@@ -40,6 +40,15 @@ const SourceAuditPayloadSchema = z.object({
   ownerEmail: z.string().email(),
 })
 
+// D-114: a denied `requirePermission` check never reaches the route handler, so there is no
+// resource instance to describe — just the permission the actor lacked. Kept as its own
+// resourceType (not folded into the resource-specific schemas above) so those stay strictly typed
+// to their actual resource shape rather than gaining optional fields to accommodate a no-resource
+// case.
+const PermissionDeniedAuditPayloadSchema = z.object({
+  permission: PermissionSchema,
+})
+
 // Covers events migrated from the auth-only heediq-auth-audit-log (D-087), which this table
 // supersedes — sign-in/linking events, not RBAC changes.
 const AuthAuditPayloadSchema = z.object({
@@ -57,6 +66,7 @@ export interface AuditPayloadMap {
   groupAssignment: z.infer<typeof GroupAssignmentAuditPayloadSchema>
   source: z.infer<typeof SourceAuditPayloadSchema>
   auth: z.infer<typeof AuthAuditPayloadSchema>
+  permission: z.infer<typeof PermissionDeniedAuditPayloadSchema>
 }
 export type AuditResourceType = keyof AuditPayloadMap
 
@@ -65,6 +75,9 @@ export type AuditResourceType = keyof AuditPayloadMap
 // JWT — cheap because it's already in AuthContext, unlike group membership which isn't baked into
 // the token today (D-105) and was deliberately left off this envelope to avoid an extra DynamoDB
 // read on every audit write; revisit if the audit viewer later needs it.
+// `effect` defaults to 'permitted' so every pre-D-114 stored entry (written before this field
+// existed) still parses unchanged when read back by the audit-log viewer (D-102's write-once
+// table has no backfill path). Only `requirePermission`'s new denial write ever sets 'denied'.
 const auditEnvelope = {
   orgId: z.string().uuid(),
   eventId: z.string().uuid(),
@@ -73,6 +86,7 @@ const auditEnvelope = {
   actorEmail: z.string().email(),
   actorRole: OrgRoleSchema,
   action: z.string().min(1),
+  effect: z.enum(['permitted', 'denied']).default('permitted'),
 }
 
 // pk=ORG#<orgId>, sk=<timestamp>#<eventId> (D-102) — write-once by construction, no update/delete
@@ -84,6 +98,7 @@ export const AuditLogEntrySchema = z.discriminatedUnion('resourceType', [
   z.object({ ...auditEnvelope, resourceType: z.literal('groupAssignment'), before: GroupAssignmentAuditPayloadSchema.optional(), after: GroupAssignmentAuditPayloadSchema.optional() }),
   z.object({ ...auditEnvelope, resourceType: z.literal('source'), before: SourceAuditPayloadSchema.optional(), after: SourceAuditPayloadSchema.optional() }),
   z.object({ ...auditEnvelope, resourceType: z.literal('auth'), before: AuthAuditPayloadSchema.optional(), after: AuthAuditPayloadSchema.optional() }),
+  z.object({ ...auditEnvelope, resourceType: z.literal('permission'), before: PermissionDeniedAuditPayloadSchema.optional(), after: PermissionDeniedAuditPayloadSchema.optional() }),
 ])
 export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>
 
@@ -98,6 +113,7 @@ export interface BuildAuditLogEntryInput<T extends AuditResourceType> {
   actorUserId: string
   actorEmail: string
   actorRole: z.infer<typeof OrgRoleSchema>
+  effect?: 'permitted' | 'denied'
   before?: AuditPayloadMap[T]
   after?: AuditPayloadMap[T]
 }
@@ -113,6 +129,7 @@ export function buildAuditLogEntry<T extends AuditResourceType>(
     actorEmail: input.actorEmail,
     actorRole: input.actorRole,
     action: input.action,
+    effect: input.effect,
     resourceType: input.resourceType,
     before: input.before,
     after: input.after,

@@ -16,7 +16,7 @@ Published as a private package to GitHub Packages (`@heediq/shared`). Consuming 
 - `src/enums.ts` — `Tier`, `WhisperModel`, `JobStatus`, `SourceStatus`, `OrgRole`, `SourceType`
 - `src/domain.ts` — `Org`, `User`, `Source`, `Job`, `Summary` domain schemas
 - `src/permissions.ts` — RBAC permission catalog (D-102): `PERMISSIONS`/`Permission`, `SYSTEM_ROLES`, `DEFAULT_ORG_RBAC_SEED`, and `Role`/`Group`/`RoleAssignment` domain schemas
-- `src/audit.ts` — RBAC audit trail (D-102): `AuditPayloadMap` (per-resource-type `before`/`after` payload shapes) and `AuditLogEntrySchema`
+- `src/audit.ts` — RBAC audit trail (D-102): `AuditPayloadMap` (per-resource-type `before`/`after` payload shapes) and `AuditLogEntrySchema`. Every entry carries an `effect: 'permitted' | 'denied'` field (default `permitted`, D-114) — a denied `requirePermission` check writes a `resourceType: 'permission'` entry with just the attempted permission, since the route handler (and its resource-specific payload) never ran.
 - `src/requests.ts` — API request/response schemas (`CreateSourceRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, `AuthMethodSchema`/`ListAuthMethodsResponseSchema`, etc.)
 - `src/messages.ts` — SQS message schemas (`TranscriptionJobMessage`, `SummarizationJobMessage`)
 - `src/ws.ts` — generalized real-time WebSocket framework (D-109, supersedes D-061's one-off `WsStatusMessage`): `WsScopeSchema` (`user`/`org`/`broadcast`), `WsEventPayloadMap` (per-event-type payload registry — `job_status` is the first entry), `WsEventEnvelopeSchema` (discriminated on `type`), `buildWsEvent()`. Carries zero AWS SDK dependencies — the actual push call lives in `heediq-api/src/lib/wsPush.ts`.
@@ -47,7 +47,14 @@ this package — see `DECISIONS.md` D-068/D-069.
 
 ## Versioning
 
-Current version: `0.12.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.13.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.13.0 additive change (D-114):** `audit.ts`'s `AuditLogEntrySchema` gains an `effect: 'permitted' |
+'denied'` field on the shared envelope, defaulting to `'permitted'` so every already-stored entry
+(written before this field existed) still parses unchanged. New `resourceType: 'permission'` entry
+variant (`PermissionDeniedAuditPayloadSchema = { permission }`) for `requirePermission` denials, which
+never reach a route handler and so have no resource-specific `before`/`after` to attach — just the
+permission the actor lacked. Non-breaking.
 
 **0.12.0 breaking change (D-109):** `messages.ts`'s one-off `WsStatusMessageSchema` (D-061) replaced
 by `src/ws.ts`'s generic `WsEventEnvelopeSchema` + `WsEventPayloadMap` registry, so any future feature
@@ -110,7 +117,7 @@ pnpm typecheck     # tsc --noEmit
 pnpm build         # emit to dist/
 ```
 
-138 unit tests across 9 files covering valid + invalid inputs for every schema.
+140 unit tests across 9 files covering valid + invalid inputs for every schema.
 
 ## First-time setup for consuming repos
 
