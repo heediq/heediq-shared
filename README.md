@@ -1,6 +1,9 @@
 # @heediq/shared
 
-Shared Zod schemas and TypeScript types consumed by `heediq-api`, `heediq-web`, and `heediq-worker-summarization`.
+Shared Zod schemas and TypeScript types consumed by `heediq-api`, `heediq-web`, and
+`heediq-worker-summarization` as an installed npm package, and hand-mirrored (no cross-language
+package) by `heediq-worker-transcription/src/models.py` for `TranscriptionJobMessage`/
+`SummarizationJobMessage`.
 
 ## Purpose
 
@@ -19,7 +22,7 @@ Published as a private package to GitHub Packages (`@heediq/shared`). Consuming 
 - `src/ws.ts` — generalized real-time WebSocket framework (D-109, supersedes D-061's one-off `WsStatusMessage`): `WsScopeSchema` (`user`/`org`/`broadcast`), `WsEventPayloadMap` (per-event-type payload registry — `job_status` is the first entry), `WsEventEnvelopeSchema` (discriminated on `type`), `buildWsEvent()`. Carries zero AWS SDK dependencies — the actual push call lives in `heediq-api/src/lib/wsPush.ts`.
 - `src/api.ts` — `ApiSuccess<T>` / `ApiError` response envelope types
 - `src/logger.ts` — `createLogger(service)` structured JSON logger with correlation fields (`sourceId`/`requestId`), a recursive PII-redaction denylist (D-085), and a `LOG_LEVEL`-gated `debug`/`info`/`warn`/`error` threshold, default `info` (D-093)
-- `src/passwordPolicy.ts` — `PASSWORD_POLICY`, `PASSWORD_POLICY_RULES`, `isPasswordPolicyCompliant()`: single source of truth for password rules, consumed by heediq-api and heediq-web. The Cognito User Pool's `passwordPolicy` in heediq-infra is a separate literal kept in sync via the periodic consistency-check, not by import — see `DECISIONS.md` D-020 and `rules/10-consistency-check.md`.
+- `src/passwordPolicy.ts` — `PASSWORD_POLICY`, `PASSWORD_POLICY_RULES`, `isPasswordPolicyCompliant()`: single source of truth for password rules, consumed by heediq-api and heediq-web. The Cognito User Pool's `passwordPolicy` in `heediq-infra/lib/foundation/cognito.ts` is a separate literal kept in sync via the periodic consistency-check, not by import — see `DECISIONS.md` D-020 and `rules/10-consistency-check.md`.
 - `src/index.ts` — re-exports everything
 
 ## Contracts
