@@ -13,13 +13,15 @@ Published as a private package to GitHub Packages (`@heediq/shared`). Consuming 
 
 ## Key Files
 
-- `src/enums.ts` — `Tier`, `WhisperModel`, `JobStatus`, `SourceStatus`, `OrgRole`, `SourceType`
-- `src/domain.ts` — `Org`, `User`, `Source`, `Job`, `Summary` domain schemas
+- `src/enums.ts` — `Tier`, `WhisperModel`, `JobStatus`, `SourceStatus`, `OrgRole`, `SourceType`, and the Context Library enums `Domain`, `ContextStatus`, `SourceClassification`, `ExtractedItemStatus`, `LedgerEntryStatus`, `LedgerEntryOrigin` (D-127/D-131/D-133/D-135/D-136)
+- `src/domain.ts` — `Org`, `User`, `Source`, `Job`, `Summary` domain schemas. `Source` carries the Context Library review fields `contextId`/`classification`/`proposedClassification` (D-128/D-133); `Summary` is `transcript` + `gist` only (extraction moved to `ExtractedItem`, D-135)
+- `src/domains.ts` — Domain behaviour catalog (D-127/D-131): `DOMAIN_PROFILES` (work/study/personal/other; `extractionFields` + `starterPrompts` are stable **slug IDs**, not display text, so `heediq-web` maps them through `t()` per D-075/D-076) + `DOMAIN_FIT_CONFIDENCE_THRESHOLD`
+- `src/context.ts` — Context Library data model (D-124–D-140): `Context` (self-nesting `parentContextId`, D-134), `ProposedClassification` (exactly-one-of `proposedContextId`/`newContextName`), `ExtractedItem` (D-135), `DecisionLedgerEntry` (D-136) + `LEDGER_REVIEW_CONFIDENCE_THRESHOLD`
 - `src/permissions.ts` — RBAC permission catalog (D-102): `PERMISSIONS`/`Permission`, `SYSTEM_ROLES`, `DEFAULT_ORG_RBAC_SEED`, and `Role`/`Group`/`RoleAssignment` domain schemas
 - `src/audit.ts` — RBAC audit trail (D-102): `AuditPayloadMap` (per-resource-type `before`/`after` payload shapes) and `AuditLogEntrySchema`. Every entry carries an `effect: 'permitted' | 'denied'` field (default `permitted`, D-114) — a denied `requirePermission` check writes a `resourceType: 'permission'` entry with just the attempted permission, since the route handler (and its resource-specific payload) never ran.
 - `src/requests.ts` — API request/response schemas (`CreateSourceRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, `AuthMethodSchema`/`ListAuthMethodsResponseSchema`, etc.)
 - `src/messages.ts` — SQS message schemas (`TranscriptionJobMessage`, `SummarizationJobMessage`)
-- `src/ws.ts` — generalized real-time WebSocket framework (D-109, supersedes D-061's one-off `WsStatusMessage`): `WsScopeSchema` (`user`/`org`/`broadcast`), `WsEventPayloadMap` (per-event-type payload registry — `job_status` is the first entry), `WsEventEnvelopeSchema` (discriminated on `type`), `buildWsEvent()`. Carries zero AWS SDK dependencies — the actual push call lives in `heediq-api/src/lib/wsPush.ts`.
+- `src/ws.ts` — generalized real-time WebSocket framework (D-109, supersedes D-061's one-off `WsStatusMessage`): `WsScopeSchema` (`user`/`org`/`broadcast`), `WsEventPayloadMap` (per-event-type payload registry — `job_status`, plus Context Library events `classification_ready` (D-133), `chat_delta`/`chat_complete` (D-139)), `WsEventEnvelopeSchema` (discriminated on `type`), `buildWsEvent()`. Carries zero AWS SDK dependencies — the actual push call lives in `heediq-api/src/lib/wsPush.ts`.
 - `src/api.ts` — `ApiSuccess<T>` / `ApiError` response envelope types
 - `src/logger.ts` — `createLogger(service)` structured JSON logger with correlation fields (`sourceId`/`requestId`), a recursive PII-redaction denylist (D-085), and a `LOG_LEVEL`-gated `debug`/`info`/`warn`/`error` threshold, default `info` (D-093)
 - `src/passwordPolicy.ts` — `PASSWORD_POLICY`, `PASSWORD_POLICY_RULES`, `isPasswordPolicyCompliant()`: single source of truth for password rules, consumed by heediq-api and heediq-web. The Cognito User Pool's `passwordPolicy` in `heediq-infra/lib/foundation/cognito.ts` is a separate literal kept in sync via the periodic consistency-check, not by import — see `DECISIONS.md` D-020 and `rules/10-consistency-check.md`.
@@ -41,13 +43,28 @@ function process(s: Source) { ... }
 
 `Source` (formerly `Recording`) is the generic ingested-content entity per D-068 — any unit a user
 puts into the system (audio today; PDF/doc/image/pasted text as ingestion paths land), not just
-audio. It carries a `labels: string[]` field for free-form tagging, independent of any future
-Container association. `Container` (project/epic/story hierarchy) is planned but not yet added to
-this package — see `DECISIONS.md` D-068/D-069.
+audio. It carries a `labels: string[]` field for free-form tagging, plus its Context Library
+placement (`contextId` + review-gate `classification`/`proposedClassification`, D-128/D-133).
+
+The Context Library entities live in `context.ts` and `domains.ts`: a **`Context`** (the project/
+epic/story hierarchy, renamed from D-068's "Container" per D-129 — one self-nesting entity via
+`parentContextId`, D-134) into which a Source is filed after review; an item-level **`ExtractedItem`**
+(D-135, replaced `Summary`'s flat extraction arrays); a per-Context **`DecisionLedgerEntry`** (D-136);
+and the behaviour-bearing **Domain** profiles (`DOMAIN_PROFILES`, D-127/D-131). Table/GSI creation for
+these is the infra build-order step, not this package — see `plans/context-library-spec.md`.
 
 ## Versioning
 
-Current version: `0.13.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.14.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.14.0 — Context Library contracts (D-124–D-140).** Additive: new enums (`Domain` etc.), `domains.ts`
+(`DOMAIN_PROFILES` + `DOMAIN_FIT_CONFIDENCE_THRESHOLD`), `context.ts` (`Context`/`ExtractedItem`/
+`DecisionLedgerEntry`/`ProposedClassification` + `LEDGER_REVIEW_CONFIDENCE_THRESHOLD`), new `Source`
+fields (`contextId`/`classification`/`proposedClassification`), three WS events (`classification_ready`/
+`chat_delta`/`chat_complete`). **Breaking:** `Summary` drops `requirements`/`decisions`/`openQuestions`/
+`actionItems` for an optional `gist` — extraction moved to item-level `ExtractedItem` (D-135, supersedes
+D-132). Consumers (`heediq-worker-summarization`, `heediq-api`, `heediq-web`, `heediq-worker-transcription`
+`models.py`) update `Summary` usage on bump.
 
 **0.13.0 additive change (D-114):** `audit.ts`'s `AuditLogEntrySchema` gains an `effect: 'permitted' |
 'denied'` field on the shared envelope, defaulting to `'permitted'` so every already-stored entry
@@ -117,7 +134,8 @@ pnpm typecheck     # tsc --noEmit
 pnpm build         # emit to dist/
 ```
 
-140 unit tests across 9 files covering valid + invalid inputs for every schema.
+Unit tests are colocated in `src/__tests__/`, one file per schema module, covering valid + invalid
+inputs for every schema.
 
 ## First-time setup for consuming repos
 

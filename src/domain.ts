@@ -4,8 +4,10 @@ import {
   WhisperModelSchema,
   JobStatusSchema,
   SourceStatusSchema,
+  SourceClassificationSchema,
   OrgRoleSchema,
 } from './enums.js'
+import { ProposedClassificationSchema } from './context.js'
 
 export const OrgSchema = z.object({
   orgId: z.string().uuid(),
@@ -43,6 +45,15 @@ export const SourceSchema = z.object({
   durationSecs: z.number().int().positive().optional(),
   audioS3Key: z.string().optional(),
   labels: z.array(z.string().min(1).max(50)).max(20).default([]),
+  // ── Context Library (D-128/D-133) ──
+  // The single Context this Source is filed into, set on review approval (D-128).
+  contextId: z.string().uuid().optional(),
+  // Review-gate axis, separate from `status` (D-133). Optional/no default on purpose: absent means
+  // the Source predates or hasn't reached the review flow — the ingest worker sets 'pending_review'
+  // once it has a proposal, approval sets 'approved'. Defaulting would mislabel legacy `done` rows.
+  classification: SourceClassificationSchema.optional(),
+  // The classifier's placement proposal (D-130/D-133), cleared on approval.
+  proposedClassification: ProposedClassificationSchema.optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 })
@@ -61,14 +72,15 @@ export const JobSchema = z.object({
 })
 export type Job = z.infer<typeof JobSchema>
 
+// Summary shrinks to transcript + a short prose gist (D-135, supersedes D-132): the flat
+// `requirements`/`decisions`/`openQuestions`/`actionItems` arrays are replaced by item-level
+// `ExtractedItem` records (see `context.ts`). A Context's structured memory is its kept
+// `ExtractedItem`s; Summary is now just the raw transcript plus a human-readable gist.
 export const SummarySchema = z.object({
   sourceId: z.string().uuid(),
   orgId: z.string().uuid(),
   transcript: z.string().optional(),
-  requirements: z.array(z.string()),
-  decisions: z.array(z.string()),
-  openQuestions: z.array(z.string()),
-  actionItems: z.array(z.string()),
+  gist: z.string().optional(),
   createdAt: z.string().datetime(),
 })
 export type Summary = z.infer<typeof SummarySchema>
