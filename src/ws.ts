@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { JobStatusSchema } from './enums.js'
+import { ProposedClassificationSchema } from './context.js'
 
 // Payload for the job_status event (D-061, generalized by D-109) — pushed at org scope so every
 // connected user in the source's org sees library-wide status updates, not just the uploader.
@@ -9,10 +10,36 @@ const JobStatusPayloadSchema = z.object({
   status: JobStatusSchema,
 })
 
+// ── Context Library WS events (additive per D-109) ─────────────────────────────
+
+// The ingest classifier's proposal, pushed so the review card renders live without polling (D-133).
+// Reuses `ProposedClassificationSchema` (the same shape persisted on the Source) plus the sourceId.
+// Typically pushed at org scope, like job_status.
+const ClassificationReadyPayloadSchema = ProposedClassificationSchema.and(
+  z.object({ sourceId: z.string().uuid() }),
+)
+
+// A batched chunk of a streaming chat turn (D-139) — pushed at user scope (private to the chatter),
+// ~100ms cadence. `delta` is the new text since the last chunk.
+const ChatDeltaPayloadSchema = z.object({
+  conversationId: z.string().uuid(),
+  messageId: z.string().min(1),
+  delta: z.string(),
+})
+
+// Finalizes a streamed chat turn (D-139) — the assistant message is now persisted.
+const ChatCompletePayloadSchema = z.object({
+  conversationId: z.string().uuid(),
+  messageId: z.string().min(1),
+})
+
 // One entry per event type this WS framework carries. Adding an event type is additive — future
 // features extend this map instead of growing a single ad-hoc message shape (D-109).
 export interface WsEventPayloadMap {
   job_status: z.infer<typeof JobStatusPayloadSchema>
+  classification_ready: z.infer<typeof ClassificationReadyPayloadSchema>
+  chat_delta: z.infer<typeof ChatDeltaPayloadSchema>
+  chat_complete: z.infer<typeof ChatCompletePayloadSchema>
 }
 export type WsEventType = keyof WsEventPayloadMap
 
@@ -35,6 +62,13 @@ const wsEnvelope = {
 
 export const WsEventEnvelopeSchema = z.discriminatedUnion('type', [
   z.object({ ...wsEnvelope, type: z.literal('job_status'), payload: JobStatusPayloadSchema }),
+  z.object({
+    ...wsEnvelope,
+    type: z.literal('classification_ready'),
+    payload: ClassificationReadyPayloadSchema,
+  }),
+  z.object({ ...wsEnvelope, type: z.literal('chat_delta'), payload: ChatDeltaPayloadSchema }),
+  z.object({ ...wsEnvelope, type: z.literal('chat_complete'), payload: ChatCompletePayloadSchema }),
 ])
 export type WsEventEnvelope = z.infer<typeof WsEventEnvelopeSchema>
 

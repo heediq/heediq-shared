@@ -62,6 +62,53 @@ describe('WsEventEnvelopeSchema', () => {
     }
     expect(() => WsEventEnvelopeSchema.parse(event)).toThrow()
   })
+
+  it('parses a classification_ready event (D-133)', () => {
+    const event = buildWsEvent({
+      scope: { kind: 'org', orgId: uuid },
+      type: 'classification_ready',
+      payload: { sourceId: uuid, newContextName: 'Project Apollo', domain: 'work', confidence: 0.9, labels: [] },
+    })
+    expect(WsEventEnvelopeSchema.parse(event)).toMatchObject({ type: 'classification_ready' })
+  })
+
+  it('rejects a classification_ready payload proposing both an existing and a new context', () => {
+    const event = {
+      scope: { kind: 'org' as const, orgId: uuid },
+      occurredAt: now,
+      type: 'classification_ready' as const,
+      payload: { sourceId: uuid, proposedContextId: uuid, newContextName: 'X', domain: 'work', confidence: 0.9 },
+    }
+    expect(() => WsEventEnvelopeSchema.parse(event)).toThrow()
+  })
+
+  it('parses a chat_delta event at user scope (D-139)', () => {
+    const event = buildWsEvent({
+      scope: { kind: 'user', userId: 'u1' },
+      type: 'chat_delta',
+      payload: { conversationId: uuid, messageId: 'm1', delta: 'Hello' },
+    })
+    expect(WsEventEnvelopeSchema.parse(event)).toMatchObject({ type: 'chat_delta' })
+  })
+
+  it('parses a chat_complete event (D-139)', () => {
+    const event = buildWsEvent({
+      scope: { kind: 'user', userId: 'u1' },
+      type: 'chat_complete',
+      payload: { conversationId: uuid, messageId: 'm1' },
+    })
+    expect(WsEventEnvelopeSchema.parse(event)).toMatchObject({ type: 'chat_complete' })
+  })
+
+  it('rejects a chat_delta payload missing the delta text', () => {
+    const event = {
+      scope: { kind: 'user' as const, userId: 'u1' },
+      occurredAt: now,
+      type: 'chat_delta' as const,
+      payload: { conversationId: uuid, messageId: 'm1' },
+    }
+    expect(() => WsEventEnvelopeSchema.parse(event)).toThrow()
+  })
 })
 
 describe('buildWsEvent', () => {
