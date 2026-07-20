@@ -53,6 +53,36 @@ describe('SourceSchema', () => {
   it('rejects empty title', () => {
     expect(() => SourceSchema.parse({ ...valid, title: '' })).toThrow()
   })
+  it('parses a legacy source without Context Library fields (D-128/D-133)', () => {
+    const s = SourceSchema.parse(valid)
+    expect(s.contextId).toBeUndefined()
+    expect(s.classification).toBeUndefined()
+    expect(s.proposedClassification).toBeUndefined()
+  })
+  it('accepts a filed source with contextId + approved classification (D-128)', () => {
+    expect(
+      SourceSchema.parse({ ...valid, contextId: uuid, classification: 'approved' }),
+    ).toMatchObject({ contextId: uuid, classification: 'approved' })
+  })
+  it('accepts a pending_review source carrying a proposedClassification (D-133)', () => {
+    const parsed = SourceSchema.parse({
+      ...valid,
+      classification: 'pending_review',
+      proposedClassification: { newContextName: 'Project Apollo', domain: 'work', confidence: 0.9 },
+    })
+    expect(parsed.classification).toBe('pending_review')
+    expect(parsed.proposedClassification).toMatchObject({ newContextName: 'Project Apollo' })
+  })
+  it('rejects an invalid proposedClassification (both context id and new name set)', () => {
+    expect(() =>
+      SourceSchema.parse({
+        ...valid,
+        proposedClassification: {
+          proposedContextId: uuid, newContextName: 'X', domain: 'work', confidence: 0.9,
+        },
+      }),
+    ).toThrow()
+  })
 })
 
 describe('JobSchema', () => {
@@ -68,16 +98,25 @@ describe('JobSchema', () => {
   })
 })
 
-describe('SummarySchema', () => {
-  const valid = {
-    sourceId: uuid, orgId: uuid,
-    requirements: ['R1'], decisions: ['D1'], openQuestions: ['Q1'], actionItems: ['A1'],
-    createdAt: now,
-  }
-  it('parses valid summary', () => {
-    expect(SummarySchema.parse(valid)).toMatchObject({ requirements: ['R1'] })
+describe('SummarySchema (shrunk to transcript + gist, D-135)', () => {
+  const valid = { sourceId: uuid, orgId: uuid, createdAt: now }
+  it('parses a minimal summary (no transcript/gist yet)', () => {
+    expect(SummarySchema.parse(valid)).toMatchObject({ sourceId: uuid })
   })
-  it('allows optional transcript', () => {
-    expect(SummarySchema.parse({ ...valid, transcript: 'raw text' })).toMatchObject({ transcript: 'raw text' })
+  it('allows optional transcript and gist', () => {
+    expect(
+      SummarySchema.parse({ ...valid, transcript: 'raw text', gist: 'A short prose summary.' }),
+    ).toMatchObject({ transcript: 'raw text', gist: 'A short prose summary.' })
+  })
+  it('no longer carries the flat extraction arrays (moved to ExtractedItem, D-135)', () => {
+    const parsed = SummarySchema.parse({
+      ...valid,
+      // Extra legacy keys are stripped by the schema, not persisted.
+      requirements: ['R1'], decisions: ['D1'], openQuestions: ['Q1'], actionItems: ['A1'],
+    }) as Record<string, unknown>
+    expect(parsed.requirements).toBeUndefined()
+    expect(parsed.decisions).toBeUndefined()
+    expect(parsed.openQuestions).toBeUndefined()
+    expect(parsed.actionItems).toBeUndefined()
   })
 })

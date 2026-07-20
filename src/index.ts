@@ -1,5 +1,7 @@
 export * from './enums.js'
 export * from './api.js'
+export * from './domains.js'
+export * from './context.js'
 export * from './domain.js'
 export * from './requests.js'
 export * from './messages.js'
