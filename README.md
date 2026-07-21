@@ -55,7 +55,14 @@ these is the infra build-order step, not this package — see `plans/context-lib
 
 ## Versioning
 
-Current version: `0.15.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.15.1`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.15.1 — Contexts CRUD + review-approval request/audit contracts (§11 step 4b), additive.**
+`requests.ts` gains `CreateContextRequestSchema`/`UpdateContextRequestSchema` (mirrors `ContextSchema`'s
+`visibility`/`groupId` consistency refine) and `ReviewApprovalRequestSchema` (`contextId` + `kept`
+item-id list, D-137 wizard steps 1-2). `audit.ts`'s `AuditPayloadMap` gains `context` (name/domain/
+visibility/parentContextId) and `extractedItemReview` (sourceId/contextId/keptCount/discardedCount —
+the review act itself, not a per-item dump) resource types. No breaking changes.
 
 **0.15.0 — Context visibility + cross-org grants (D-141/D-142), additive.** New enums
 `ContextVisibility` (`personal`/`group`/`org`) and `ContextGrantAccess` (`read`/`contribute`);

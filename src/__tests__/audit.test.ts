@@ -148,3 +148,25 @@ describe('buildAuditLogEntry', () => {
     ).toThrow()
   })
 })
+
+describe('AuditLogEntrySchema — Context Library (step 4b)', () => {
+  it('parses a context entry with only an after payload (create event)', () => {
+    const entry = {
+      ...envelope,
+      resourceType: 'context' as const,
+      action: 'context:create',
+      after: { contextId: uuid, name: 'Sprint 12', domain: 'work', visibility: 'personal' },
+    }
+    expect(AuditLogEntrySchema.parse(entry)).toMatchObject({ resourceType: 'context' })
+  })
+
+  it('parses an extractedItemReview entry', () => {
+    const entry = {
+      ...envelope,
+      resourceType: 'extractedItemReview' as const,
+      action: 'source:review',
+      after: { sourceId: uuid, contextId: uuid2, keptCount: 3, discardedCount: 1 },
+    }
+    expect(AuditLogEntrySchema.parse(entry)).toMatchObject({ resourceType: 'extractedItemReview' })
+  })
+})
