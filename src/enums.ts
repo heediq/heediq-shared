@@ -61,3 +61,16 @@ export type LedgerEntryStatus = z.infer<typeof LedgerEntryStatusSchema>
 // How a Decision Ledger entry came to exist (D-136).
 export const LedgerEntryOriginSchema = z.enum(['auto', 'user', 'chat_prompted'])
 export type LedgerEntryOrigin = z.infer<typeof LedgerEntryOriginSchema>
+
+// A Context's audience tier (D-141). `personal` = only its owner (scopeKey `U#<userId>`); `group` =
+// a D-102 group (scopeKey `G#<groupId>`, requires `groupId`); `org` = the whole org (scopeKey
+// `O#<orgId>`). The writer materializes `scopeKey` from this; cross-*org* sharing is a separate axis
+// (grants, D-142), not a visibility tier.
+export const ContextVisibilitySchema = z.enum(['personal', 'group', 'org'])
+export type ContextVisibility = z.infer<typeof ContextVisibilitySchema>
+
+// What a cross-org grant lets the grantee do with a shared Context (D-142). `read` = read + chat over
+// it; `contribute` = also add Sources/data (which home in the Context's *owner* org, never the
+// grantee's). Deliberately coarse — no per-field ACLs.
+export const ContextGrantAccessSchema = z.enum(['read', 'contribute'])
+export type ContextGrantAccess = z.infer<typeof ContextGrantAccessSchema>

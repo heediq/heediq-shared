@@ -12,6 +12,8 @@ import {
   ExtractedItemStatusSchema,
   LedgerEntryStatusSchema,
   LedgerEntryOriginSchema,
+  ContextVisibilitySchema,
+  ContextGrantAccessSchema,
 } from '../enums.js'
 
 describe('TierSchema', () => {
@@ -122,5 +124,23 @@ describe('LedgerEntryOriginSchema (D-136)', () => {
   })
   it('rejects an unknown origin', () => {
     expect(() => LedgerEntryOriginSchema.parse('import')).toThrow()
+  })
+})
+
+describe('ContextVisibilitySchema (D-141)', () => {
+  it.each(['personal', 'group', 'org'])('accepts %s', (v) => {
+    expect(ContextVisibilitySchema.parse(v)).toBe(v)
+  })
+  it('rejects an unknown visibility', () => {
+    expect(() => ContextVisibilitySchema.parse('public')).toThrow()
+  })
+})
+
+describe('ContextGrantAccessSchema (D-142)', () => {
+  it.each(['read', 'contribute'])('accepts %s', (a) => {
+    expect(ContextGrantAccessSchema.parse(a)).toBe(a)
+  })
+  it('rejects an unknown access level', () => {
+    expect(() => ContextGrantAccessSchema.parse('write')).toThrow()
   })
 })

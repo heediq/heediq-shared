@@ -2,6 +2,8 @@ import { z } from 'zod'
 import {
   DomainSchema,
   ContextStatusSchema,
+  ContextVisibilitySchema,
+  ContextGrantAccessSchema,
   ExtractedItemStatusSchema,
   LedgerEntryStatusSchema,
   LedgerEntryOriginSchema,
@@ -34,20 +36,54 @@ export type ProposedClassification = z.infer<typeof ProposedClassificationSchema
 // A Context — the user's actual project/activity, belonging to one Domain, self-nesting into
 // sub-Contexts (project → epic → story) via `parentContextId` (D-129/D-134). Renamed from D-068's
 // "Container". Accumulates Sources.
-export const ContextSchema = z.object({
+export const ContextSchema = z
+  .object({
+    contextId: z.string().uuid(),
+    orgId: z.string().uuid(),
+    userId: z.string(),
+    domain: DomainSchema,
+    name: z.string().min(1).max(255),
+    description: z.string().max(2000).optional(),
+    // Self-nesting (D-134); absent = a top-level Context.
+    parentContextId: z.string().uuid().optional(),
+    // Audience tier (D-141) — the API writer materializes `scopeKey` (`U#`/`G#`/`O#`) from this for
+    // the by-scope GSI. Defaults to `personal` so a Context is private unless deliberately shared.
+    visibility: ContextVisibilitySchema.default('personal'),
+    // The D-102 group a `group`-visibility Context is shared with — required iff visibility='group',
+    // absent otherwise (enforced by the refine below).
+    groupId: z.string().uuid().optional(),
+    status: ContextStatusSchema.default('active'),
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
+  })
+  .refine((c) => (c.visibility === 'group') === (c.groupId !== undefined), {
+    message: 'groupId must be set iff visibility is "group"',
+    path: ['groupId'],
+  })
+export type Context = z.infer<typeof ContextSchema>
+
+// A regulated cross-org share of a Context (D-142) — the single controlled crossing of D-021 org
+// isolation. Row in `heediq-context-grants` (PK=`granteeUserId`, SK=`contextId`, GSI `by-context`,
+// TTL `expiresAt`). Grants are **always time-limited** and authorized against a *live* row on every
+// request (never cached into the JWT); `expiresAt` is compared in code because DDB TTL deletion lags
+// (the TTL is cleanup only). Revocation = deleting the row.
+export const ContextGrantSchema = z.object({
   contextId: z.string().uuid(),
-  orgId: z.string().uuid(),
-  userId: z.string(),
-  domain: DomainSchema,
-  name: z.string().min(1).max(255),
-  description: z.string().max(2000).optional(),
-  // Self-nesting (D-134); absent = a top-level Context.
-  parentContextId: z.string().uuid().optional(),
-  status: ContextStatusSchema.default('active'),
+  granteeUserId: z.string(),
+  // The grantee's own org — for audit and so a cross-org read is attributable; may equal ownerOrgId
+  // for a same-org share, but the primary use is userA@orgA → userB@orgB (D-142/D-143).
+  granteeOrgId: z.string().uuid(),
+  // The Context owner's org — contributed Sources/data home here, never in the grantee's org (D-142).
+  ownerOrgId: z.string().uuid(),
+  // The owner/admin who issued the grant (gated on `context:share`).
+  grantedByUserId: z.string(),
+  access: ContextGrantAccessSchema,
+  // Required — grants are regulated and always expire (D-142). Also the DDB TTL attribute.
+  expiresAt: z.string().datetime(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 })
-export type Context = z.infer<typeof ContextSchema>
+export type ContextGrant = z.infer<typeof ContextGrantSchema>
 
 // One individually-addressable extracted statement with provenance and curation status (D-135,
 // supersedes D-132's flat `Summary.extracted` arrays). `category` is one of the filed Domain's

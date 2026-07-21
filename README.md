@@ -16,8 +16,8 @@ Published as a private package to GitHub Packages (`@heediq/shared`). Consuming 
 - `src/enums.ts` — `Tier`, `WhisperModel`, `JobStatus`, `SourceStatus`, `OrgRole`, `SourceType`, and the Context Library enums `Domain`, `ContextStatus`, `SourceClassification`, `ExtractedItemStatus`, `LedgerEntryStatus`, `LedgerEntryOrigin` (D-127/D-131/D-133/D-135/D-136)
 - `src/domain.ts` — `Org`, `User`, `Source`, `Job`, `Summary` domain schemas. `Source` carries the Context Library review fields `contextId`/`classification`/`proposedClassification` (D-128/D-133); `Summary` is `transcript` + `gist` only (extraction moved to `ExtractedItem`, D-135)
 - `src/domains.ts` — Domain behaviour catalog (D-127/D-131): `DOMAIN_PROFILES` (work/study/personal/other; `extractionFields` + `starterPrompts` are stable **slug IDs**, not display text, so `heediq-web` maps them through `t()` per D-075/D-076) + `DOMAIN_FIT_CONFIDENCE_THRESHOLD`
-- `src/context.ts` — Context Library data model (D-124–D-140): `Context` (self-nesting `parentContextId`, D-134), `ProposedClassification` (exactly-one-of `proposedContextId`/`newContextName`), `ExtractedItem` (D-135), `DecisionLedgerEntry` (D-136) + `LEDGER_REVIEW_CONFIDENCE_THRESHOLD`
-- `src/permissions.ts` — RBAC permission catalog (D-102): `PERMISSIONS`/`Permission`, `SYSTEM_ROLES`, `DEFAULT_ORG_RBAC_SEED`, and `Role`/`Group`/`RoleAssignment` domain schemas
+- `src/context.ts` — Context Library data model (D-124–D-142): `Context` (self-nesting `parentContextId` D-134; `visibility`/`groupId` D-141), `ProposedClassification` (exactly-one-of `proposedContextId`/`newContextName`), `ExtractedItem` (D-135), `DecisionLedgerEntry` (D-136) + `LEDGER_REVIEW_CONFIDENCE_THRESHOLD`, `ContextGrant` (regulated cross-org share, D-142)
+- `src/permissions.ts` — RBAC permission catalog (D-102): `PERMISSIONS`/`Permission` (incl. `context:*` D-141/D-142), `SYSTEM_ROLES`, `DEFAULT_ORG_RBAC_SEED`, and `Role`/`Group`/`RoleAssignment` domain schemas
 - `src/audit.ts` — RBAC audit trail (D-102): `AuditPayloadMap` (per-resource-type `before`/`after` payload shapes) and `AuditLogEntrySchema`. Every entry carries an `effect: 'permitted' | 'denied'` field (default `permitted`, D-114) — a denied `requirePermission` check writes a `resourceType: 'permission'` entry with just the attempted permission, since the route handler (and its resource-specific payload) never ran.
 - `src/requests.ts` — API request/response schemas (`CreateSourceRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, `AuthMethodSchema`/`ListAuthMethodsResponseSchema`, etc.)
 - `src/messages.ts` — SQS message schemas (`TranscriptionJobMessage`, `SummarizationJobMessage`)
@@ -55,7 +55,14 @@ these is the infra build-order step, not this package — see `plans/context-lib
 
 ## Versioning
 
-Current version: `0.14.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.15.0`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.15.0 — Context visibility + cross-org grants (D-141/D-142), additive.** New enums
+`ContextVisibility` (`personal`/`group`/`org`) and `ContextGrantAccess` (`read`/`contribute`);
+`ContextSchema` gains `visibility` (default `personal`) + `groupId?` (required iff `visibility='group'`);
+new `ContextGrantSchema` (the regulated, always-expiring cross-org share — `heediq-context-grants` row,
+D-142); permission catalog appends `context:read`/`create`/`update`/`delete`/`share` (append-only, D-106)
+— members get CRUD, `context:share` is admin/owner-gated (D-141). No breaking changes.
 
 **0.14.0 — Context Library contracts (D-124–D-140).** Additive: new enums (`Domain` etc.), `domains.ts`
 (`DOMAIN_PROFILES` + `DOMAIN_FIT_CONFIDENCE_THRESHOLD`), `context.ts` (`Context`/`ExtractedItem`/
