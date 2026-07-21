@@ -40,6 +40,24 @@ const SourceAuditPayloadSchema = z.object({
   ownerEmail: z.string().email(),
 })
 
+const ContextAuditPayloadSchema = z.object({
+  contextId: z.string().uuid(),
+  name: z.string(),
+  domain: z.string(),
+  visibility: z.string(),
+  parentContextId: z.string().uuid().optional(),
+})
+
+// The review-approval act itself (D-137 wizard), not a full before/after item-by-item dump —
+// counts are enough to reconstruct "what happened" without re-listing extracted content (D-093
+// keeps audit payloads non-PII, same discipline as CloudWatch logs).
+const ExtractedItemReviewAuditPayloadSchema = z.object({
+  sourceId: z.string().uuid(),
+  contextId: z.string().uuid(),
+  keptCount: z.number().int().min(0),
+  discardedCount: z.number().int().min(0),
+})
+
 // D-114: a denied `requirePermission` check never reaches the route handler, so there is no
 // resource instance to describe — just the permission the actor lacked. Kept as its own
 // resourceType (not folded into the resource-specific schemas above) so those stay strictly typed
@@ -67,6 +85,8 @@ export interface AuditPayloadMap {
   source: z.infer<typeof SourceAuditPayloadSchema>
   auth: z.infer<typeof AuthAuditPayloadSchema>
   permission: z.infer<typeof PermissionDeniedAuditPayloadSchema>
+  context: z.infer<typeof ContextAuditPayloadSchema>
+  extractedItemReview: z.infer<typeof ExtractedItemReviewAuditPayloadSchema>
 }
 export type AuditResourceType = keyof AuditPayloadMap
 
@@ -99,6 +119,8 @@ export const AuditLogEntrySchema = z.discriminatedUnion('resourceType', [
   z.object({ ...auditEnvelope, resourceType: z.literal('source'), before: SourceAuditPayloadSchema.optional(), after: SourceAuditPayloadSchema.optional() }),
   z.object({ ...auditEnvelope, resourceType: z.literal('auth'), before: AuthAuditPayloadSchema.optional(), after: AuthAuditPayloadSchema.optional() }),
   z.object({ ...auditEnvelope, resourceType: z.literal('permission'), before: PermissionDeniedAuditPayloadSchema.optional(), after: PermissionDeniedAuditPayloadSchema.optional() }),
+  z.object({ ...auditEnvelope, resourceType: z.literal('context'), before: ContextAuditPayloadSchema.optional(), after: ContextAuditPayloadSchema.optional() }),
+  z.object({ ...auditEnvelope, resourceType: z.literal('extractedItemReview'), before: ExtractedItemReviewAuditPayloadSchema.optional(), after: ExtractedItemReviewAuditPayloadSchema.optional() }),
 ])
 export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>
 
