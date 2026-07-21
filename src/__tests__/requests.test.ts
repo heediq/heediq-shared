@@ -16,6 +16,9 @@ import {
   CreateGroupRequestSchema,
   UpdateGroupRequestSchema,
   CreateRoleAssignmentRequestSchema,
+  CreateContextRequestSchema,
+  UpdateContextRequestSchema,
+  ReviewApprovalRequestSchema,
 } from '../requests.js'
 
 const uuid = '00000000-0000-0000-0000-000000000001'
@@ -206,5 +209,50 @@ describe('CreateRoleAssignmentRequestSchema (D-102 Phase 2)', () => {
   })
   it('rejects mismatched discriminant fields (role type carrying groupId)', () => {
     expect(() => CreateRoleAssignmentRequestSchema.parse({ assignmentType: 'role', groupId: uuid })).toThrow()
+  })
+})
+
+describe('CreateContextRequestSchema (D-124-D-142, step 4b)', () => {
+  it('accepts a minimal personal Context (visibility/groupId omitted)', () => {
+    expect(CreateContextRequestSchema.parse({ name: 'Sprint 12', domain: 'work' }))
+      .toMatchObject({ name: 'Sprint 12', domain: 'work' })
+  })
+  it('accepts a group Context with groupId', () => {
+    expect(CreateContextRequestSchema.parse({ name: 'Team roadmap', domain: 'work', visibility: 'group', groupId: uuid }))
+      .toMatchObject({ visibility: 'group', groupId: uuid })
+  })
+  it('rejects visibility=group without groupId', () => {
+    expect(() => CreateContextRequestSchema.parse({ name: 'x', domain: 'work', visibility: 'group' })).toThrow()
+  })
+  it('rejects groupId without visibility=group', () => {
+    expect(() => CreateContextRequestSchema.parse({ name: 'x', domain: 'work', groupId: uuid })).toThrow()
+  })
+  it('rejects an invalid domain', () => {
+    expect(() => CreateContextRequestSchema.parse({ name: 'x', domain: 'invalid' })).toThrow()
+  })
+})
+
+describe('UpdateContextRequestSchema (D-124-D-142, step 4b)', () => {
+  it('accepts a partial update (name only)', () => {
+    expect(UpdateContextRequestSchema.parse({ name: 'Renamed' })).toMatchObject({ name: 'Renamed' })
+  })
+  it('rejects an empty object', () => {
+    expect(() => UpdateContextRequestSchema.parse({})).toThrow()
+  })
+})
+
+describe('ReviewApprovalRequestSchema (D-137 wizard steps 1-2)', () => {
+  it('accepts a contextId with kept item ids', () => {
+    expect(ReviewApprovalRequestSchema.parse({ contextId: uuid, kept: [uuid] }))
+      .toMatchObject({ contextId: uuid, kept: [uuid] })
+  })
+  it('defaults kept to an empty array', () => {
+    expect(ReviewApprovalRequestSchema.parse({ contextId: uuid })).toMatchObject({ kept: [] })
+  })
+  it('rejects a non-uuid contextId', () => {
+    expect(() => ReviewApprovalRequestSchema.parse({ contextId: 'not-a-uuid' })).toThrow()
+  })
+  it('rejects a non-uuid item id in kept', () => {
+    expect(() => ReviewApprovalRequestSchema.parse({ contextId: uuid, kept: ['not-a-uuid'] })).toThrow()
   })
 })

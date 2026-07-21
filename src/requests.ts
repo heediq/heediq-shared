@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { WhisperModelSchema } from './enums.js'
+import { WhisperModelSchema, DomainSchema, ContextVisibilitySchema } from './enums.js'
 import { PermissionSchema } from './permissions.js'
 
 export const CreateSourceRequestSchema = z.object({
@@ -128,3 +128,46 @@ export const CreateRoleAssignmentRequestSchema = z.discriminatedUnion('assignmen
   z.object({ assignmentType: z.literal('group'), groupId: z.string().uuid() }),
 ])
 export type CreateRoleAssignmentRequest = z.infer<typeof CreateRoleAssignmentRequestSchema>
+
+// ── Context Library — Contexts CRUD + review-approval (D-124–D-142, §11 step 4b) ────────────────
+
+// visibility/groupId mirror ContextSchema's own refine (context.ts) — both present together or
+// neither, enforced here too since the route parses the request before touching ContextSchema.
+export const CreateContextRequestSchema = z
+  .object({
+    name: z.string().min(1).max(255),
+    domain: DomainSchema,
+    description: z.string().max(2000).optional(),
+    parentContextId: z.string().uuid().optional(),
+    visibility: ContextVisibilitySchema.optional(),
+    groupId: z.string().uuid().optional(),
+  })
+  .refine((v) => (v.visibility === 'group') === (v.groupId !== undefined), {
+    message: 'groupId must be set iff visibility is "group"',
+    path: ['groupId'],
+  })
+export type CreateContextRequest = z.infer<typeof CreateContextRequestSchema>
+
+// Partial update — groupId/visibility consistency against the *existing* record (not just this
+// request body) is validated by the route handler, since a partial patch may change only one of
+// the pair while the other stays at its current stored value.
+export const UpdateContextRequestSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  description: z.string().max(2000).optional(),
+  parentContextId: z.string().uuid().optional(),
+  visibility: ContextVisibilitySchema.optional(),
+  groupId: z.string().uuid().optional(),
+}).refine((v) => Object.keys(v).length > 0, {
+  message: 'At least one field required',
+})
+export type UpdateContextRequest = z.infer<typeof UpdateContextRequestSchema>
+
+// The review-approval step (D-137 wizard steps 1-2): files a Source's kept ExtractedItems into a
+// Context. `kept` may be empty (a source can be approved with zero durable items). Items not in
+// `kept` are marked `discarded`, not deleted — full item history stays queryable (D-136 ledger
+// generation reads across a Context's item history, not just the kept subset).
+export const ReviewApprovalRequestSchema = z.object({
+  contextId: z.string().uuid(),
+  kept: z.array(z.string().uuid()).default([]),
+})
+export type ReviewApprovalRequest = z.infer<typeof ReviewApprovalRequestSchema>
