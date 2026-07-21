@@ -11,6 +11,7 @@ import {
 const uuid = '00000000-0000-0000-0000-000000000001'
 const uuid2 = '00000000-0000-0000-0000-000000000002'
 const now = new Date().toISOString()
+const nowEpoch = Math.floor(Date.now() / 1000)
 
 describe('ContextSchema (D-129/D-134)', () => {
   const valid = {
@@ -61,7 +62,7 @@ describe('ContextGrantSchema (D-142)', () => {
     ownerOrgId: uuid2,
     grantedByUserId: 'owner-1',
     access: 'read' as const,
-    expiresAt: now,
+    expiresAt: nowEpoch,
     createdAt: now,
     updatedAt: now,
   }
@@ -77,6 +78,9 @@ describe('ContextGrantSchema (D-142)', () => {
   it('requires expiresAt (grants are always time-limited)', () => {
     const { expiresAt: _omit, ...noExpiry } = valid
     expect(() => ContextGrantSchema.parse(noExpiry)).toThrow()
+  })
+  it('rejects an ISO string expiresAt — must be epoch seconds for DynamoDB TTL', () => {
+    expect(() => ContextGrantSchema.parse({ ...valid, expiresAt: now })).toThrow()
   })
 })
 

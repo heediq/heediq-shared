@@ -78,8 +78,10 @@ export const ContextGrantSchema = z.object({
   // The owner/admin who issued the grant (gated on `context:share`).
   grantedByUserId: z.string(),
   access: ContextGrantAccessSchema,
-  // Required — grants are regulated and always expire (D-142). Also the DDB TTL attribute.
-  expiresAt: z.string().datetime(),
+  // Required — grants are regulated and always expire (D-142). Epoch seconds, not ISO — this IS
+  // the DynamoDB TTL attribute, and DynamoDB TTL only recognizes a Number (epoch seconds); a string
+  // is silently ignored by the TTL sweep (caught in 4c-i, corrected from the original ISO typing).
+  expiresAt: z.number().int(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 })

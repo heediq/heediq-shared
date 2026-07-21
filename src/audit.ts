@@ -58,6 +58,16 @@ const ExtractedItemReviewAuditPayloadSchema = z.object({
   discardedCount: z.number().int().min(0),
 })
 
+// Cross-org grant issuance/revoke (D-142, §11 step 4c-i) — granteeEmail intentionally excluded
+// (PII, D-093); granteeUserId is the durable, non-PII identifier the same discipline uses elsewhere.
+const ContextGrantAuditPayloadSchema = z.object({
+  contextId: z.string().uuid(),
+  granteeUserId: z.string(),
+  granteeOrgId: z.string().uuid(),
+  access: z.string(),
+  expiresAt: z.number().int(),
+})
+
 // D-114: a denied `requirePermission` check never reaches the route handler, so there is no
 // resource instance to describe — just the permission the actor lacked. Kept as its own
 // resourceType (not folded into the resource-specific schemas above) so those stay strictly typed
@@ -87,6 +97,7 @@ export interface AuditPayloadMap {
   permission: z.infer<typeof PermissionDeniedAuditPayloadSchema>
   context: z.infer<typeof ContextAuditPayloadSchema>
   extractedItemReview: z.infer<typeof ExtractedItemReviewAuditPayloadSchema>
+  contextGrant: z.infer<typeof ContextGrantAuditPayloadSchema>
 }
 export type AuditResourceType = keyof AuditPayloadMap
 
@@ -121,6 +132,7 @@ export const AuditLogEntrySchema = z.discriminatedUnion('resourceType', [
   z.object({ ...auditEnvelope, resourceType: z.literal('permission'), before: PermissionDeniedAuditPayloadSchema.optional(), after: PermissionDeniedAuditPayloadSchema.optional() }),
   z.object({ ...auditEnvelope, resourceType: z.literal('context'), before: ContextAuditPayloadSchema.optional(), after: ContextAuditPayloadSchema.optional() }),
   z.object({ ...auditEnvelope, resourceType: z.literal('extractedItemReview'), before: ExtractedItemReviewAuditPayloadSchema.optional(), after: ExtractedItemReviewAuditPayloadSchema.optional() }),
+  z.object({ ...auditEnvelope, resourceType: z.literal('contextGrant'), before: ContextGrantAuditPayloadSchema.optional(), after: ContextGrantAuditPayloadSchema.optional() }),
 ])
 export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>
 
