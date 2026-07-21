@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   ContextSchema,
+  ContextGrantSchema,
   ProposedClassificationSchema,
   ExtractedItemSchema,
   DecisionLedgerEntrySchema,
@@ -33,6 +34,49 @@ describe('ContextSchema (D-129/D-134)', () => {
   })
   it('rejects a non-uuid parentContextId', () => {
     expect(() => ContextSchema.parse({ ...valid, parentContextId: 'nope' })).toThrow()
+  })
+  // ── visibility / groupId (D-141) ──
+  it('defaults visibility to personal', () => {
+    expect(ContextSchema.parse(valid).visibility).toBe('personal')
+  })
+  it('accepts org visibility with no groupId', () => {
+    expect(ContextSchema.parse({ ...valid, visibility: 'org' }).visibility).toBe('org')
+  })
+  it('accepts group visibility with a groupId', () => {
+    expect(ContextSchema.parse({ ...valid, visibility: 'group', groupId: uuid2 }).groupId).toBe(uuid2)
+  })
+  it('rejects group visibility without a groupId', () => {
+    expect(() => ContextSchema.parse({ ...valid, visibility: 'group' })).toThrow()
+  })
+  it('rejects a groupId when visibility is not group', () => {
+    expect(() => ContextSchema.parse({ ...valid, visibility: 'org', groupId: uuid2 })).toThrow()
+  })
+})
+
+describe('ContextGrantSchema (D-142)', () => {
+  const valid = {
+    contextId: uuid,
+    granteeUserId: 'grantee-1',
+    granteeOrgId: uuid,
+    ownerOrgId: uuid2,
+    grantedByUserId: 'owner-1',
+    access: 'read' as const,
+    expiresAt: now,
+    createdAt: now,
+    updatedAt: now,
+  }
+  it('parses a valid read grant', () => {
+    expect(ContextGrantSchema.parse(valid)).toMatchObject({ access: 'read', ownerOrgId: uuid2 })
+  })
+  it('accepts a contribute grant', () => {
+    expect(ContextGrantSchema.parse({ ...valid, access: 'contribute' }).access).toBe('contribute')
+  })
+  it('rejects an unknown access level', () => {
+    expect(() => ContextGrantSchema.parse({ ...valid, access: 'admin' })).toThrow()
+  })
+  it('requires expiresAt (grants are always time-limited)', () => {
+    const { expiresAt: _omit, ...noExpiry } = valid
+    expect(() => ContextGrantSchema.parse(noExpiry)).toThrow()
   })
 })
 
