@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { WhisperModelSchema, DomainSchema, ContextVisibilitySchema } from './enums.js'
+import { WhisperModelSchema, DomainSchema, ContextVisibilitySchema, ContextGrantAccessSchema } from './enums.js'
 import { PermissionSchema } from './permissions.js'
 
 export const CreateSourceRequestSchema = z.object({
@@ -171,3 +171,14 @@ export const ReviewApprovalRequestSchema = z.object({
   kept: z.array(z.string().uuid()).default([]),
 })
 export type ReviewApprovalRequest = z.infer<typeof ReviewApprovalRequestSchema>
+
+// Cross-org context sharing (D-142, §11 step 4c). The route resolves `granteeEmail` to a userId
+// server-side (existing-accounts-only, no invite flow yet) — the request never carries a userId
+// directly, since the caller doesn't know the grantee's internal id. `expiresAt` is epoch seconds
+// (matches ContextGrantSchema — the DynamoDB TTL attribute).
+export const CreateContextGrantRequestSchema = z.object({
+  granteeEmail: z.string().email(),
+  access: ContextGrantAccessSchema,
+  expiresAt: z.number().int(),
+})
+export type CreateContextGrantRequest = z.infer<typeof CreateContextGrantRequestSchema>

@@ -1,6 +1,6 @@
 {
   "name": "@heediq/shared",
-  "version": "0.15.1",
+  "version": "0.15.2",
   "description": "Shared Zod schemas and TypeScript types for Heediq",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
