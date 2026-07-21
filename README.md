@@ -16,7 +16,7 @@ Published as a private package to GitHub Packages (`@heediq/shared`). Consuming 
 - `src/enums.ts` — `Tier`, `WhisperModel`, `JobStatus`, `SourceStatus`, `OrgRole`, `SourceType`, and the Context Library enums `Domain`, `ContextStatus`, `SourceClassification`, `ExtractedItemStatus`, `LedgerEntryStatus`, `LedgerEntryOrigin` (D-127/D-131/D-133/D-135/D-136)
 - `src/domain.ts` — `Org`, `User`, `Source`, `Job`, `Summary` domain schemas. `Source` carries the Context Library review fields `contextId`/`classification`/`proposedClassification` (D-128/D-133); `Summary` is `transcript` + `gist` only (extraction moved to `ExtractedItem`, D-135)
 - `src/domains.ts` — Domain behaviour catalog (D-127/D-131): `DOMAIN_PROFILES` (work/study/personal/other; `extractionFields` + `starterPrompts` are stable **slug IDs**, not display text, so `heediq-web` maps them through `t()` per D-075/D-076) + `DOMAIN_FIT_CONFIDENCE_THRESHOLD`
-- `src/context.ts` — Context Library data model (D-124–D-142): `Context` (self-nesting `parentContextId` D-134; `visibility`/`groupId` D-141), `ProposedClassification` (exactly-one-of `proposedContextId`/`newContextName`), `ExtractedItem` (D-135), `DecisionLedgerEntry` (D-136) + `LEDGER_REVIEW_CONFIDENCE_THRESHOLD`, `ContextGrant` (regulated cross-org share, D-142)
+- `src/context.ts` — Context Library data model (D-124–D-142): `Context` (self-nesting `parentContextId` D-134; `visibility`/`groupId` D-141), `ProposedClassification` (exactly-one-of `proposedContextId`/`newContextName`), `ExtractedItem` (D-135), `DecisionLedgerEntry` (D-136) + `LEDGER_REVIEW_CONFIDENCE_THRESHOLD`, `ContextGrant` (regulated cross-org share, D-142; `expiresAt` is epoch-seconds — it's the DynamoDB TTL attribute)
 - `src/permissions.ts` — RBAC permission catalog (D-102): `PERMISSIONS`/`Permission` (incl. `context:*` D-141/D-142), `SYSTEM_ROLES`, `DEFAULT_ORG_RBAC_SEED`, and `Role`/`Group`/`RoleAssignment` domain schemas
 - `src/audit.ts` — RBAC audit trail (D-102): `AuditPayloadMap` (per-resource-type `before`/`after` payload shapes) and `AuditLogEntrySchema`. Every entry carries an `effect: 'permitted' | 'denied'` field (default `permitted`, D-114) — a denied `requirePermission` check writes a `resourceType: 'permission'` entry with just the attempted permission, since the route handler (and its resource-specific payload) never ran.
 - `src/requests.ts` — API request/response schemas (`CreateSourceRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, `AuthMethodSchema`/`ListAuthMethodsResponseSchema`, etc.)
@@ -55,7 +55,17 @@ these is the infra build-order step, not this package — see `plans/context-lib
 
 ## Versioning
 
-Current version: `0.15.1`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.15.2`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.15.2 — Cross-org grant issuance contracts + TTL type fix (§11 step 4c-i), additive + bug fix.**
+`context.ts`'s `ContextGrantSchema.expiresAt` changes from `z.string().datetime()` to `z.number().int()`
+(epoch seconds) — this field **is** the `heediq-context-grants` DynamoDB TTL attribute, and DynamoDB
+TTL silently ignores non-Number values, so the original ISO-string typing meant grants would never
+actually expire via TTL. Any code already writing ISO strings to this field must switch to epoch
+seconds. `requests.ts` gains `CreateContextGrantRequestSchema` (`granteeEmail` + `access` + `expiresAt`
+— the route resolves email to userId server-side, existing-accounts-only). `audit.ts`'s
+`AuditPayloadMap` gains `contextGrant` (contextId/granteeUserId/granteeOrgId/access/expiresAt —
+`granteeEmail` deliberately excluded, PII, D-093).
 
 **0.15.1 — Contexts CRUD + review-approval request/audit contracts (§11 step 4b), additive.**
 `requests.ts` gains `CreateContextRequestSchema`/`UpdateContextRequestSchema` (mirrors `ContextSchema`'s

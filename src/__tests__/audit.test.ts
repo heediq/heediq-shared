@@ -169,4 +169,24 @@ describe('AuditLogEntrySchema — Context Library (step 4b)', () => {
     }
     expect(AuditLogEntrySchema.parse(entry)).toMatchObject({ resourceType: 'extractedItemReview' })
   })
+
+  it('parses a contextGrant create entry (after-only, no before)', () => {
+    const entry = {
+      ...envelope,
+      resourceType: 'contextGrant' as const,
+      action: 'context:share',
+      after: { contextId: uuid, granteeUserId: 'u2', granteeOrgId: uuid2, access: 'read', expiresAt: 1893456000 },
+    }
+    expect(AuditLogEntrySchema.parse(entry)).toMatchObject({ resourceType: 'contextGrant' })
+  })
+
+  it('parses a contextGrant revoke entry (before-only, no after)', () => {
+    const entry = {
+      ...envelope,
+      resourceType: 'contextGrant' as const,
+      action: 'context:unshare',
+      before: { contextId: uuid, granteeUserId: 'u2', granteeOrgId: uuid2, access: 'contribute', expiresAt: 1893456000 },
+    }
+    expect(AuditLogEntrySchema.parse(entry)).toMatchObject({ resourceType: 'contextGrant' })
+  })
 })

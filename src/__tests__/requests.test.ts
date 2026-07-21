@@ -19,6 +19,7 @@ import {
   CreateContextRequestSchema,
   UpdateContextRequestSchema,
   ReviewApprovalRequestSchema,
+  CreateContextGrantRequestSchema,
 } from '../requests.js'
 
 const uuid = '00000000-0000-0000-0000-000000000001'
@@ -254,5 +255,21 @@ describe('ReviewApprovalRequestSchema (D-137 wizard steps 1-2)', () => {
   })
   it('rejects a non-uuid item id in kept', () => {
     expect(() => ReviewApprovalRequestSchema.parse({ contextId: uuid, kept: ['not-a-uuid'] })).toThrow()
+  })
+})
+
+describe('CreateContextGrantRequestSchema (D-142, §11 step 4c-i)', () => {
+  it('accepts a valid grant request', () => {
+    expect(CreateContextGrantRequestSchema.parse({ granteeEmail: 'partner@other-org.com', access: 'read', expiresAt: 1893456000 }))
+      .toMatchObject({ granteeEmail: 'partner@other-org.com', access: 'read' })
+  })
+  it('rejects an invalid email', () => {
+    expect(() => CreateContextGrantRequestSchema.parse({ granteeEmail: 'not-an-email', access: 'read', expiresAt: 1893456000 })).toThrow()
+  })
+  it('rejects an unknown access level', () => {
+    expect(() => CreateContextGrantRequestSchema.parse({ granteeEmail: 'partner@other-org.com', access: 'admin', expiresAt: 1893456000 })).toThrow()
+  })
+  it('requires expiresAt', () => {
+    expect(() => CreateContextGrantRequestSchema.parse({ granteeEmail: 'partner@other-org.com', access: 'read' })).toThrow()
   })
 })
