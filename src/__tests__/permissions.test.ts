@@ -43,6 +43,12 @@ describe('SYSTEM_ROLES / DEFAULT_ORG_RBAC_SEED', () => {
     expect(DEFAULT_ORG_RBAC_SEED.member.permissions).not.toContain('audit:read')
     expect(DEFAULT_ORG_RBAC_SEED.member.permissions).not.toContain('sources:read')
   })
+  it('member manages own Contexts but cannot share them (D-141 gating)', () => {
+    for (const p of ['context:read', 'context:create', 'context:update', 'context:delete'] as const) {
+      expect(DEFAULT_ORG_RBAC_SEED.member.permissions).toContain(p)
+    }
+    expect(DEFAULT_ORG_RBAC_SEED.member.permissions).not.toContain('context:share')
+  })
   it('both system roles are flagged isSystemRole', () => {
     expect(DEFAULT_ORG_RBAC_SEED.admin.isSystemRole).toBe(true)
     expect(DEFAULT_ORG_RBAC_SEED.member.isSystemRole).toBe(true)

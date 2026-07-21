@@ -14,6 +14,16 @@ export const PERMISSIONS = [
   'sources:enqueue-job',
   'org:manage-roles',
   'audit:read',
+  // ── Context Library (D-141/D-142) — appended, never reordered (D-106) ──
+  // Read/create/update/delete a Context. Visibility (personal/group/org) scoping is enforced by the
+  // by-scope query (D-141), not a separate permission — resource-type granularity, like sources.
+  'context:read',
+  'context:create',
+  'context:update',
+  'context:delete',
+  // The gated escalation: create a group/org-visible Context and issue/revoke cross-org grants
+  // (D-141 permission-gated sharing, D-142 grants). Not in the member seed — admin/owner only.
+  'context:share',
 ] as const
 export const PermissionSchema = z.enum(PERMISSIONS)
 export type Permission = z.infer<typeof PermissionSchema>
@@ -40,6 +50,12 @@ export const DEFAULT_ORG_RBAC_SEED: Record<
       'sources:update',
       'sources:delete',
       'sources:enqueue-job',
+      // Members manage their own Contexts (visibility scoping keeps them private by default);
+      // `context:share` is deliberately withheld — sharing to a group/org or cross-org is gated.
+      'context:read',
+      'context:create',
+      'context:update',
+      'context:delete',
     ],
     isSystemRole: true,
   },
