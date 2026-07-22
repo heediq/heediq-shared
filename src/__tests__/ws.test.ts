@@ -109,6 +109,25 @@ describe('WsEventEnvelopeSchema', () => {
     }
     expect(() => WsEventEnvelopeSchema.parse(event)).toThrow()
   })
+
+  it('parses a chat_failed event (D-145)', () => {
+    const event = buildWsEvent({
+      scope: { kind: 'user', userId: 'u1' },
+      type: 'chat_failed',
+      payload: { conversationId: uuid, messageId: 'm1', error: 'Claude API timeout' },
+    })
+    expect(WsEventEnvelopeSchema.parse(event)).toMatchObject({ type: 'chat_failed' })
+  })
+
+  it('rejects a chat_failed payload missing the error text', () => {
+    const event = {
+      scope: { kind: 'user' as const, userId: 'u1' },
+      occurredAt: now,
+      type: 'chat_failed' as const,
+      payload: { conversationId: uuid, messageId: 'm1' },
+    }
+    expect(() => WsEventEnvelopeSchema.parse(event)).toThrow()
+  })
 })
 
 describe('buildWsEvent', () => {

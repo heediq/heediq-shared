@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   TranscriptionJobMessageSchema,
   SummarizationJobMessageSchema,
+  ChatJobMessageSchema,
 } from '../messages.js'
 
 const uuid = '00000000-0000-0000-0000-000000000001'
@@ -37,5 +38,22 @@ describe('SummarizationJobMessageSchema', () => {
   it('rejects missing tier', () => {
     const { tier: _, ...noTier } = valid
     expect(() => SummarizationJobMessageSchema.parse(noTier)).toThrow()
+  })
+})
+
+describe('ChatJobMessageSchema (D-139)', () => {
+  const valid = {
+    jobId: uuid, conversationId: uuid, contextId: uuid, orgId: uuid,
+    userId: 'u1', userMessageId: uuid, tier: 'paid' as const,
+  }
+  it('parses a valid chat job message', () => {
+    expect(ChatJobMessageSchema.parse(valid)).toMatchObject({ tier: 'paid' })
+  })
+  it('rejects a non-uuid userMessageId', () => {
+    expect(() => ChatJobMessageSchema.parse({ ...valid, userMessageId: 'nope' })).toThrow()
+  })
+  it('rejects missing userId', () => {
+    const { userId: _, ...noUserId } = valid
+    expect(() => ChatJobMessageSchema.parse(noUserId)).toThrow()
   })
 })
