@@ -26,5 +26,19 @@ export const SummarizationJobMessageSchema = z.object({
 })
 export type SummarizationJobMessage = z.infer<typeof SummarizationJobMessageSchema>
 
+// SQS message sent to heediq-chat queue (D-139, §11 step 4c-ii). userMessageId is the already-
+// persisted user turn the worker is replying to (heediq-api writes it before enqueueing) — the
+// worker generates its own messageId for the assistant reply, threaded via conversationId.
+export const ChatJobMessageSchema = z.object({
+  jobId: z.string().uuid(),
+  conversationId: z.string().uuid(),
+  contextId: z.string().uuid(),
+  orgId: z.string().uuid(),
+  userId: z.string(),
+  userMessageId: z.string().uuid(),
+  tier: TierSchema,
+})
+export type ChatJobMessage = z.infer<typeof ChatJobMessageSchema>
+
 // WebSocket push events (job_status and beyond) moved to ws.ts's generic envelope + registry
 // (D-109, generalizes D-061's one-off WsStatusMessageSchema).

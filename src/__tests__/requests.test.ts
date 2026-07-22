@@ -20,6 +20,8 @@ import {
   UpdateContextRequestSchema,
   ReviewApprovalRequestSchema,
   CreateContextGrantRequestSchema,
+  CreateConversationRequestSchema,
+  CreateMessageRequestSchema,
 } from '../requests.js'
 
 const uuid = '00000000-0000-0000-0000-000000000001'
@@ -271,5 +273,28 @@ describe('CreateContextGrantRequestSchema (D-142, §11 step 4c-i)', () => {
   })
   it('requires expiresAt', () => {
     expect(() => CreateContextGrantRequestSchema.parse({ granteeEmail: 'partner@other-org.com', access: 'read' })).toThrow()
+  })
+})
+
+describe('CreateConversationRequestSchema (D-138, §11 step 4c-ii)', () => {
+  it('accepts a valid title', () => {
+    expect(CreateConversationRequestSchema.parse({ title: 'Tech spec draft' }))
+      .toMatchObject({ title: 'Tech spec draft' })
+  })
+  it('rejects an empty title', () => {
+    expect(() => CreateConversationRequestSchema.parse({ title: '' })).toThrow()
+  })
+  it('rejects a title over 255 chars', () => {
+    expect(() => CreateConversationRequestSchema.parse({ title: 'a'.repeat(256) })).toThrow()
+  })
+})
+
+describe('CreateMessageRequestSchema (D-139, §11 step 4c-ii)', () => {
+  it('accepts valid content', () => {
+    expect(CreateMessageRequestSchema.parse({ content: 'Draft a test plan for this feature' }))
+      .toMatchObject({ content: 'Draft a test plan for this feature' })
+  })
+  it('rejects empty content', () => {
+    expect(() => CreateMessageRequestSchema.parse({ content: '' })).toThrow()
   })
 })

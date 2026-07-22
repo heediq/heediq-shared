@@ -127,3 +127,34 @@ export type DecisionLedgerEntry = z.infer<typeof DecisionLedgerEntrySchema>
 // A ledger auto-answer below this confidence is flagged `needs_review` (D-136). Distinct from the
 // ~0.75 domain-fit threshold in `domains.ts` — this gates decision quality, not classification.
 export const LEDGER_REVIEW_CONFIDENCE_THRESHOLD = 0.5
+
+// ── Context chat (D-138/D-139, §11 step 4c-ii) ──────────────────────────────────
+
+// A named chat thread scoped to a Context (ChatGPT-style, D-138) — a durable artifact the user
+// returns to, not ephemeral chat. Row in `heediq-conversations` (PK=`conversationId`,
+// GSI `by-context` PK=`contextId`).
+export const ConversationSchema = z.object({
+  conversationId: z.string().uuid(),
+  contextId: z.string().uuid(),
+  orgId: z.string().uuid(),
+  userId: z.string(),
+  title: z.string().min(1).max(255),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+})
+export type Conversation = z.infer<typeof ConversationSchema>
+
+// One turn in a Conversation. Row in `heediq-chat-messages` (PK=`conversationId`,
+// SK=`sk` = `<ts>#<messageId>`, D-138) — `sk` is carried on the schema itself since it's the sort
+// key the writer must construct, not derived implicitly. `model` is set on assistant messages only
+// (which tier/model generated this turn, D-067); absent on user messages.
+export const ChatMessageSchema = z.object({
+  conversationId: z.string().uuid(),
+  sk: z.string().min(1),
+  messageId: z.string().uuid(),
+  role: z.enum(['user', 'assistant']),
+  content: z.string().min(1),
+  model: z.string().optional(),
+  createdAt: z.string().datetime(),
+})
+export type ChatMessage = z.infer<typeof ChatMessageSchema>

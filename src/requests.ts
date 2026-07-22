@@ -182,3 +182,15 @@ export const CreateContextGrantRequestSchema = z.object({
   expiresAt: z.number().int(),
 })
 export type CreateContextGrantRequest = z.infer<typeof CreateContextGrantRequestSchema>
+
+// ── Context chat (D-138/D-139, §11 step 4c-ii) ──────────────────────────────────
+
+export const CreateConversationRequestSchema = z.object({
+  title: z.string().min(1).max(255),
+})
+export type CreateConversationRequest = z.infer<typeof CreateConversationRequestSchema>
+
+export const CreateMessageRequestSchema = z.object({
+  content: z.string().min(1),
+})
+export type CreateMessageRequest = z.infer<typeof CreateMessageRequestSchema>

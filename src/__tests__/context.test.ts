@@ -6,6 +6,8 @@ import {
   ExtractedItemSchema,
   DecisionLedgerEntrySchema,
   LEDGER_REVIEW_CONFIDENCE_THRESHOLD,
+  ConversationSchema,
+  ChatMessageSchema,
 } from '../context.js'
 
 const uuid = '00000000-0000-0000-0000-000000000001'
@@ -168,5 +170,39 @@ describe('LEDGER_REVIEW_CONFIDENCE_THRESHOLD (D-136)', () => {
     expect(LEDGER_REVIEW_CONFIDENCE_THRESHOLD).toBe(0.5)
     expect(LEDGER_REVIEW_CONFIDENCE_THRESHOLD).toBeGreaterThanOrEqual(0)
     expect(LEDGER_REVIEW_CONFIDENCE_THRESHOLD).toBeLessThanOrEqual(1)
+  })
+})
+
+describe('ConversationSchema (D-138)', () => {
+  const valid = {
+    conversationId: uuid, contextId: uuid2, orgId: uuid, userId: 'u1',
+    title: 'Tech spec draft', createdAt: now, updatedAt: now,
+  }
+  it('parses a valid conversation', () => {
+    expect(ConversationSchema.parse(valid)).toMatchObject({ title: 'Tech spec draft' })
+  })
+  it('rejects an empty title', () => {
+    expect(() => ConversationSchema.parse({ ...valid, title: '' })).toThrow()
+  })
+})
+
+describe('ChatMessageSchema (D-138)', () => {
+  const valid = {
+    conversationId: uuid, sk: `${now}#${uuid2}`, messageId: uuid2,
+    role: 'user' as const, content: 'What should the auth flow look like?', createdAt: now,
+  }
+  it('parses a valid user message', () => {
+    expect(ChatMessageSchema.parse(valid)).toMatchObject({ role: 'user' })
+  })
+  it('accepts an assistant message with a model tag', () => {
+    expect(
+      ChatMessageSchema.parse({ ...valid, role: 'assistant', model: 'claude-sonnet-4-6' }),
+    ).toMatchObject({ model: 'claude-sonnet-4-6' })
+  })
+  it('rejects an unknown role', () => {
+    expect(() => ChatMessageSchema.parse({ ...valid, role: 'system' })).toThrow()
+  })
+  it('rejects empty content', () => {
+    expect(() => ChatMessageSchema.parse({ ...valid, content: '' })).toThrow()
   })
 })
