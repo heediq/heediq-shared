@@ -33,6 +33,15 @@ const ChatCompletePayloadSchema = z.object({
   messageId: z.string().min(1),
 })
 
+// A chat turn failed after retries were exhausted (D-145) — pushed at user scope so the frontend
+// has something to react to instead of an indefinite spinner (D-111). `messageId` is the assistant
+// message id the worker had allocated for this turn (never persisted, since the turn failed).
+const ChatFailedPayloadSchema = z.object({
+  conversationId: z.string().uuid(),
+  messageId: z.string().min(1),
+  error: z.string(),
+})
+
 // One entry per event type this WS framework carries. Adding an event type is additive — future
 // features extend this map instead of growing a single ad-hoc message shape (D-109).
 export interface WsEventPayloadMap {
@@ -40,6 +49,7 @@ export interface WsEventPayloadMap {
   classification_ready: z.infer<typeof ClassificationReadyPayloadSchema>
   chat_delta: z.infer<typeof ChatDeltaPayloadSchema>
   chat_complete: z.infer<typeof ChatCompletePayloadSchema>
+  chat_failed: z.infer<typeof ChatFailedPayloadSchema>
 }
 export type WsEventType = keyof WsEventPayloadMap
 
@@ -69,6 +79,7 @@ export const WsEventEnvelopeSchema = z.discriminatedUnion('type', [
   }),
   z.object({ ...wsEnvelope, type: z.literal('chat_delta'), payload: ChatDeltaPayloadSchema }),
   z.object({ ...wsEnvelope, type: z.literal('chat_complete'), payload: ChatCompletePayloadSchema }),
+  z.object({ ...wsEnvelope, type: z.literal('chat_failed'), payload: ChatFailedPayloadSchema }),
 ])
 export type WsEventEnvelope = z.infer<typeof WsEventEnvelopeSchema>
 

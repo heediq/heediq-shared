@@ -190,3 +190,45 @@ describe('AuditLogEntrySchema — Context Library (step 4b)', () => {
     expect(AuditLogEntrySchema.parse(entry)).toMatchObject({ resourceType: 'contextGrant' })
   })
 })
+
+describe('AuditLogEntrySchema — Context chat (step 4c-ii)', () => {
+  it('parses a conversation create entry (after-only, no before)', () => {
+    const entry = {
+      ...envelope,
+      resourceType: 'conversation' as const,
+      action: 'conversation:create',
+      after: { conversationId: uuid, contextId: uuid2, title: 'Tech spec draft' },
+    }
+    expect(AuditLogEntrySchema.parse(entry)).toMatchObject({ resourceType: 'conversation' })
+  })
+
+  it('parses a chatMessage entry with no content field (D-093 non-PII)', () => {
+    const entry = {
+      ...envelope,
+      resourceType: 'chatMessage' as const,
+      action: 'chatMessage:create',
+      after: { conversationId: uuid, messageId: uuid2, role: 'user' as const },
+    }
+    expect(AuditLogEntrySchema.parse(entry)).toMatchObject({ resourceType: 'chatMessage' })
+  })
+
+  it('rejects a chatMessage entry carrying a content field', () => {
+    const entry = {
+      ...envelope,
+      resourceType: 'chatMessage' as const,
+      action: 'chatMessage:create',
+      after: { conversationId: uuid, messageId: uuid2, role: 'user' as const, content: 'leaked text' },
+    }
+    expect(AuditLogEntrySchema.parse(entry)).not.toMatchObject({ after: { content: 'leaked text' } })
+  })
+
+  it('rejects an unknown chatMessage role', () => {
+    const entry = {
+      ...envelope,
+      resourceType: 'chatMessage' as const,
+      action: 'chatMessage:create',
+      after: { conversationId: uuid, messageId: uuid2, role: 'system' },
+    }
+    expect(() => AuditLogEntrySchema.parse(entry)).toThrow()
+  })
+})

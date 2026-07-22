@@ -68,6 +68,21 @@ const ContextGrantAuditPayloadSchema = z.object({
   expiresAt: z.number().int(),
 })
 
+// Context chat (D-138/D-139, §11 step 4c-ii). `content` is deliberately excluded from both — chat
+// turns are the most PII/content-dense resource type this trail covers yet (D-093 non-PII rule);
+// the audit entry proves a message was sent, never what it said.
+const ConversationAuditPayloadSchema = z.object({
+  conversationId: z.string().uuid(),
+  contextId: z.string().uuid(),
+  title: z.string(),
+})
+
+const ChatMessageAuditPayloadSchema = z.object({
+  conversationId: z.string().uuid(),
+  messageId: z.string().uuid(),
+  role: z.enum(['user', 'assistant']),
+})
+
 // D-114: a denied `requirePermission` check never reaches the route handler, so there is no
 // resource instance to describe — just the permission the actor lacked. Kept as its own
 // resourceType (not folded into the resource-specific schemas above) so those stay strictly typed
@@ -98,6 +113,8 @@ export interface AuditPayloadMap {
   context: z.infer<typeof ContextAuditPayloadSchema>
   extractedItemReview: z.infer<typeof ExtractedItemReviewAuditPayloadSchema>
   contextGrant: z.infer<typeof ContextGrantAuditPayloadSchema>
+  conversation: z.infer<typeof ConversationAuditPayloadSchema>
+  chatMessage: z.infer<typeof ChatMessageAuditPayloadSchema>
 }
 export type AuditResourceType = keyof AuditPayloadMap
 
@@ -133,6 +150,8 @@ export const AuditLogEntrySchema = z.discriminatedUnion('resourceType', [
   z.object({ ...auditEnvelope, resourceType: z.literal('context'), before: ContextAuditPayloadSchema.optional(), after: ContextAuditPayloadSchema.optional() }),
   z.object({ ...auditEnvelope, resourceType: z.literal('extractedItemReview'), before: ExtractedItemReviewAuditPayloadSchema.optional(), after: ExtractedItemReviewAuditPayloadSchema.optional() }),
   z.object({ ...auditEnvelope, resourceType: z.literal('contextGrant'), before: ContextGrantAuditPayloadSchema.optional(), after: ContextGrantAuditPayloadSchema.optional() }),
+  z.object({ ...auditEnvelope, resourceType: z.literal('conversation'), before: ConversationAuditPayloadSchema.optional(), after: ConversationAuditPayloadSchema.optional() }),
+  z.object({ ...auditEnvelope, resourceType: z.literal('chatMessage'), before: ChatMessageAuditPayloadSchema.optional(), after: ChatMessageAuditPayloadSchema.optional() }),
 ])
 export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>
 
