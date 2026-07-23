@@ -83,6 +83,18 @@ const ChatMessageAuditPayloadSchema = z.object({
   role: z.enum(['user', 'assistant']),
 })
 
+// A user-facing Decision Ledger mutation (D-148 fill/confirm/edit/create/delete) — `topic`/`answer`
+// deliberately excluded (a decision topic/answer can carry the same sensitive content as extraction,
+// D-093 non-PII rule); the entry proves *which* ledger entry changed and to what status/origin,
+// never its wording. Auto (worker-written) reconciliation entries are not audited here — this trail
+// records human actions, matching how the other payloads describe an actor's act.
+const LedgerEntryAuditPayloadSchema = z.object({
+  entryId: z.string().uuid(),
+  contextId: z.string().uuid(),
+  status: z.string(),
+  origin: z.string(),
+})
+
 // D-114: a denied `requirePermission` check never reaches the route handler, so there is no
 // resource instance to describe — just the permission the actor lacked. Kept as its own
 // resourceType (not folded into the resource-specific schemas above) so those stay strictly typed
@@ -115,6 +127,7 @@ export interface AuditPayloadMap {
   contextGrant: z.infer<typeof ContextGrantAuditPayloadSchema>
   conversation: z.infer<typeof ConversationAuditPayloadSchema>
   chatMessage: z.infer<typeof ChatMessageAuditPayloadSchema>
+  ledgerEntry: z.infer<typeof LedgerEntryAuditPayloadSchema>
 }
 export type AuditResourceType = keyof AuditPayloadMap
 
@@ -152,6 +165,7 @@ export const AuditLogEntrySchema = z.discriminatedUnion('resourceType', [
   z.object({ ...auditEnvelope, resourceType: z.literal('contextGrant'), before: ContextGrantAuditPayloadSchema.optional(), after: ContextGrantAuditPayloadSchema.optional() }),
   z.object({ ...auditEnvelope, resourceType: z.literal('conversation'), before: ConversationAuditPayloadSchema.optional(), after: ConversationAuditPayloadSchema.optional() }),
   z.object({ ...auditEnvelope, resourceType: z.literal('chatMessage'), before: ChatMessageAuditPayloadSchema.optional(), after: ChatMessageAuditPayloadSchema.optional() }),
+  z.object({ ...auditEnvelope, resourceType: z.literal('ledgerEntry'), before: LedgerEntryAuditPayloadSchema.optional(), after: LedgerEntryAuditPayloadSchema.optional() }),
 ])
 export type AuditLogEntry = z.infer<typeof AuditLogEntrySchema>
 

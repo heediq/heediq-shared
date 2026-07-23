@@ -128,6 +128,23 @@ export type DecisionLedgerEntry = z.infer<typeof DecisionLedgerEntrySchema>
 // ~0.75 domain-fit threshold in `domains.ts` — this gates decision quality, not classification.
 export const LEDGER_REVIEW_CONFIDENCE_THRESHOLD = 0.5
 
+// Chat-time ledger gating (D-149): when a chat turn is blocked because the Context has unsettled
+// ledger entries, the API returns `ApiError` with `error.code = 'LEDGER_GATED'` and `error.details`
+// shaped as `LedgerGatedDetails` — the minimal per-entry info the chat UI needs to prompt the user
+// to fill them (no `answer`, kept lean; the full entry comes from `GET /contexts/:id/ledger`).
+export const LEDGER_GATED_ERROR_CODE = 'LEDGER_GATED'
+export const LedgerBlockingEntrySchema = z.object({
+  entryId: z.string().uuid(),
+  topic: z.string().min(1),
+  status: LedgerEntryStatusSchema, // always 'open' or 'needs_review' in practice
+})
+export type LedgerBlockingEntry = z.infer<typeof LedgerBlockingEntrySchema>
+
+export const LedgerGatedDetailsSchema = z.object({
+  blockingEntries: z.array(LedgerBlockingEntrySchema),
+})
+export type LedgerGatedDetails = z.infer<typeof LedgerGatedDetailsSchema>
+
 // ── Context chat (D-138/D-139, §11 step 4c-ii) ──────────────────────────────────
 
 // A named chat thread scoped to a Context (ChatGPT-style, D-138) — a durable artifact the user

@@ -232,3 +232,27 @@ describe('AuditLogEntrySchema — Context chat (step 4c-ii)', () => {
     expect(() => AuditLogEntrySchema.parse(entry)).toThrow()
   })
 })
+
+describe('AuditLogEntrySchema — Decision Ledger (D-148, step 6)', () => {
+  it('parses a ledgerEntry fill entry (after-only)', () => {
+    const entry = {
+      ...envelope,
+      resourceType: 'ledgerEntry' as const,
+      action: 'ledgerEntry:update',
+      after: { entryId: uuid, contextId: uuid2, status: 'confirmed', origin: 'user' },
+    }
+    expect(AuditLogEntrySchema.parse(entry)).toMatchObject({ resourceType: 'ledgerEntry' })
+  })
+
+  it('strips a topic/answer field (D-093 non-PII — content never audited)', () => {
+    const entry = {
+      ...envelope,
+      resourceType: 'ledgerEntry' as const,
+      action: 'ledgerEntry:update',
+      after: { entryId: uuid, contextId: uuid2, status: 'confirmed', origin: 'user', topic: 'secret', answer: 'leaked' },
+    }
+    const parsed = AuditLogEntrySchema.parse(entry)
+    expect(parsed.after).not.toHaveProperty('topic')
+    expect(parsed.after).not.toHaveProperty('answer')
+  })
+})

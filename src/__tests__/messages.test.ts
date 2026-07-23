@@ -3,6 +3,7 @@ import {
   TranscriptionJobMessageSchema,
   SummarizationJobMessageSchema,
   ChatJobMessageSchema,
+  LedgerJobMessageSchema,
 } from '../messages.js'
 
 const uuid = '00000000-0000-0000-0000-000000000001'
@@ -55,5 +56,18 @@ describe('ChatJobMessageSchema (D-139)', () => {
   it('rejects missing userId', () => {
     const { userId: _, ...noUserId } = valid
     expect(() => ChatJobMessageSchema.parse(noUserId)).toThrow()
+  })
+})
+
+describe('LedgerJobMessageSchema (D-148)', () => {
+  const valid = { jobId: uuid, contextId: uuid, sourceId: uuid, orgId: uuid, tier: 'free' as const }
+  it('parses a valid ledger job message', () => {
+    expect(LedgerJobMessageSchema.parse(valid)).toMatchObject({ tier: 'free' })
+  })
+  it('rejects a non-uuid contextId', () => {
+    expect(() => LedgerJobMessageSchema.parse({ ...valid, contextId: 'nope' })).toThrow()
+  })
+  it('rejects an invalid tier', () => {
+    expect(() => LedgerJobMessageSchema.parse({ ...valid, tier: 'premium' })).toThrow()
   })
 })

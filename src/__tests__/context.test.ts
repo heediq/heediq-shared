@@ -6,6 +6,8 @@ import {
   ExtractedItemSchema,
   DecisionLedgerEntrySchema,
   LEDGER_REVIEW_CONFIDENCE_THRESHOLD,
+  LedgerGatedDetailsSchema,
+  LEDGER_GATED_ERROR_CODE,
   ConversationSchema,
   ChatMessageSchema,
 } from '../context.js'
@@ -170,6 +172,29 @@ describe('LEDGER_REVIEW_CONFIDENCE_THRESHOLD (D-136)', () => {
     expect(LEDGER_REVIEW_CONFIDENCE_THRESHOLD).toBe(0.5)
     expect(LEDGER_REVIEW_CONFIDENCE_THRESHOLD).toBeGreaterThanOrEqual(0)
     expect(LEDGER_REVIEW_CONFIDENCE_THRESHOLD).toBeLessThanOrEqual(1)
+  })
+})
+
+describe('LedgerGatedDetailsSchema (D-149)', () => {
+  it('exposes the stable LEDGER_GATED error code', () => {
+    expect(LEDGER_GATED_ERROR_CODE).toBe('LEDGER_GATED')
+  })
+  it('parses a gated response detail with blocking entries', () => {
+    const details = {
+      blockingEntries: [
+        { entryId: uuid, topic: 'Which auth provider?', status: 'open' as const },
+        { entryId: uuid2, topic: 'DB choice', status: 'needs_review' as const },
+      ],
+    }
+    expect(LedgerGatedDetailsSchema.parse(details).blockingEntries).toHaveLength(2)
+  })
+  it('accepts an empty blockingEntries array', () => {
+    expect(LedgerGatedDetailsSchema.parse({ blockingEntries: [] }).blockingEntries).toEqual([])
+  })
+  it('rejects a blocking entry with an empty topic', () => {
+    expect(() =>
+      LedgerGatedDetailsSchema.parse({ blockingEntries: [{ entryId: uuid, topic: '', status: 'open' }] }),
+    ).toThrow()
   })
 })
 

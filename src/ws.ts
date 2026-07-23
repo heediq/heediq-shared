@@ -42,6 +42,16 @@ const ChatFailedPayloadSchema = z.object({
   error: z.string(),
 })
 
+// The review-time ledger reconciliation pass finished (D-148) — the Context's Decision Ledger has
+// been (re)generated for this source, so the review wizard's step 3 can fetch and render it. Pushed
+// at user scope (private to the reviewer). `entryCount` is the total ledger size after reconciliation
+// (a lightweight signal; the wizard re-fetches the entries via `GET /contexts/:id/ledger`).
+const LedgerReadyPayloadSchema = z.object({
+  contextId: z.string().uuid(),
+  sourceId: z.string().uuid(),
+  entryCount: z.number().int().min(0),
+})
+
 // One entry per event type this WS framework carries. Adding an event type is additive — future
 // features extend this map instead of growing a single ad-hoc message shape (D-109).
 export interface WsEventPayloadMap {
@@ -50,6 +60,7 @@ export interface WsEventPayloadMap {
   chat_delta: z.infer<typeof ChatDeltaPayloadSchema>
   chat_complete: z.infer<typeof ChatCompletePayloadSchema>
   chat_failed: z.infer<typeof ChatFailedPayloadSchema>
+  ledger_ready: z.infer<typeof LedgerReadyPayloadSchema>
 }
 export type WsEventType = keyof WsEventPayloadMap
 
@@ -80,6 +91,7 @@ export const WsEventEnvelopeSchema = z.discriminatedUnion('type', [
   z.object({ ...wsEnvelope, type: z.literal('chat_delta'), payload: ChatDeltaPayloadSchema }),
   z.object({ ...wsEnvelope, type: z.literal('chat_complete'), payload: ChatCompletePayloadSchema }),
   z.object({ ...wsEnvelope, type: z.literal('chat_failed'), payload: ChatFailedPayloadSchema }),
+  z.object({ ...wsEnvelope, type: z.literal('ledger_ready'), payload: LedgerReadyPayloadSchema }),
 ])
 export type WsEventEnvelope = z.infer<typeof WsEventEnvelopeSchema>
 
