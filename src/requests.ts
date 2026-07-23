@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { WhisperModelSchema, DomainSchema, ContextVisibilitySchema, ContextGrantAccessSchema } from './enums.js'
+import { WhisperModelSchema, DomainSchema, ContextVisibilitySchema, ContextGrantAccessSchema, LedgerEntryStatusSchema } from './enums.js'
 import { PermissionSchema } from './permissions.js'
 
 export const CreateSourceRequestSchema = z.object({
@@ -190,7 +190,33 @@ export const CreateConversationRequestSchema = z.object({
 })
 export type CreateConversationRequest = z.infer<typeof CreateConversationRequestSchema>
 
+// `bypassLedgerGating` (D-149): chat-time gating blocks a turn when the Context has any
+// `open`/`needs_review` ledger entry; the user either fills them (ledger PATCH) and retries, or
+// retries with this flag set to proceed anyway. Absent/false = gating enforced.
 export const CreateMessageRequestSchema = z.object({
   content: z.string().min(1),
+  bypassLedgerGating: z.boolean().optional(),
 })
 export type CreateMessageRequest = z.infer<typeof CreateMessageRequestSchema>
+
+// ── Context Decision Ledger — read/fill routes (D-136/D-148, §11 step 6) ─────────
+// The wizard step-3 fill action and standalone ledger editing. A user edit always sets the entry's
+// origin to `user` server-side (not in the request). Confidence is server-managed (1.0 on a user
+// answer), never client-supplied. Create is for a manually-added decision/question the user tracks.
+export const CreateLedgerEntryRequestSchema = z.object({
+  topic: z.string().min(1).max(500),
+  answer: z.string().min(1).max(5000).nullable().optional(),
+})
+export type CreateLedgerEntryRequest = z.infer<typeof CreateLedgerEntryRequestSchema>
+
+// Fill/confirm/edit an existing entry. `answer: null` explicitly clears an answer (reverts toward
+// `open`); omitting it leaves the stored answer untouched. `status` lets the user confirm a
+// `needs_review` auto-answer or reopen an entry. At least one field must be present.
+export const UpdateLedgerEntryRequestSchema = z.object({
+  topic: z.string().min(1).max(500).optional(),
+  answer: z.string().min(1).max(5000).nullable().optional(),
+  status: LedgerEntryStatusSchema.optional(),
+}).refine((v) => Object.keys(v).length > 0, {
+  message: 'At least one field required',
+})
+export type UpdateLedgerEntryRequest = z.infer<typeof UpdateLedgerEntryRequestSchema>

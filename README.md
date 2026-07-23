@@ -16,12 +16,12 @@ Published as a private package to GitHub Packages (`@heediq/shared`). Consuming 
 - `src/enums.ts` — `Tier`, `WhisperModel`, `JobStatus`, `SourceStatus`, `OrgRole`, `SourceType`, and the Context Library enums `Domain`, `ContextStatus`, `SourceClassification`, `ExtractedItemStatus`, `LedgerEntryStatus`, `LedgerEntryOrigin` (D-127/D-131/D-133/D-135/D-136)
 - `src/domain.ts` — `Org`, `User`, `Source`, `Job`, `Summary` domain schemas. `Source` carries the Context Library review fields `contextId`/`classification`/`proposedClassification` (D-128/D-133); `Summary` is `transcript` + `gist` only (extraction moved to `ExtractedItem`, D-135)
 - `src/domains.ts` — Domain behaviour catalog (D-127/D-131): `DOMAIN_PROFILES` (work/study/personal/other; `extractionFields` + `starterPrompts` are stable **slug IDs**, not display text, so `heediq-web` maps them through `t()` per D-075/D-076) + `DOMAIN_FIT_CONFIDENCE_THRESHOLD`
-- `src/context.ts` — Context Library data model (D-124–D-142): `Context` (self-nesting `parentContextId` D-134; `visibility`/`groupId` D-141), `ProposedClassification` (exactly-one-of `proposedContextId`/`newContextName`), `ExtractedItem` (D-135), `DecisionLedgerEntry` (D-136) + `LEDGER_REVIEW_CONFIDENCE_THRESHOLD`, `ContextGrant` (regulated cross-org share, D-142; `expiresAt` is epoch-seconds — it's the DynamoDB TTL attribute)
+- `src/context.ts` — Context Library data model (D-124–D-142): `Context` (self-nesting `parentContextId` D-134; `visibility`/`groupId` D-141), `ProposedClassification` (exactly-one-of `proposedContextId`/`newContextName`), `ExtractedItem` (D-135), `DecisionLedgerEntry` (D-136) + `LEDGER_REVIEW_CONFIDENCE_THRESHOLD`, `LedgerGatedDetails` + `LEDGER_GATED_ERROR_CODE` (the chat-gating `ApiError` detail shape, D-149), `Conversation`/`ChatMessage` (D-138), `ContextGrant` (regulated cross-org share, D-142; `expiresAt` is epoch-seconds — it's the DynamoDB TTL attribute)
 - `src/permissions.ts` — RBAC permission catalog (D-102): `PERMISSIONS`/`Permission` (incl. `context:*` D-141/D-142), `SYSTEM_ROLES`, `DEFAULT_ORG_RBAC_SEED`, and `Role`/`Group`/`RoleAssignment` domain schemas
-- `src/audit.ts` — RBAC audit trail (D-102): `AuditPayloadMap` (per-resource-type `before`/`after` payload shapes) and `AuditLogEntrySchema`. Every entry carries an `effect: 'permitted' | 'denied'` field (default `permitted`, D-114) — a denied `requirePermission` check writes a `resourceType: 'permission'` entry with just the attempted permission, since the route handler (and its resource-specific payload) never ran.
-- `src/requests.ts` — API request/response schemas (`CreateSourceRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, `AuthMethodSchema`/`ListAuthMethodsResponseSchema`, etc.)
-- `src/messages.ts` — SQS message schemas (`TranscriptionJobMessage`, `SummarizationJobMessage`)
-- `src/ws.ts` — generalized real-time WebSocket framework (D-109, supersedes D-061's one-off `WsStatusMessage`): `WsScopeSchema` (`user`/`org`/`broadcast`), `WsEventPayloadMap` (per-event-type payload registry — `job_status`, plus Context Library events `classification_ready` (D-133), `chat_delta`/`chat_complete` (D-139)), `WsEventEnvelopeSchema` (discriminated on `type`), `buildWsEvent()`. Carries zero AWS SDK dependencies — the actual push call lives in `heediq-api/src/lib/wsPush.ts`.
+- `src/audit.ts` — RBAC audit trail (D-102): `AuditPayloadMap` (per-resource-type `before`/`after` payload shapes) and `AuditLogEntrySchema`. Context Library resource types: `context`/`extractedItemReview` (D-137), `contextGrant` (D-142), `conversation`/`chatMessage` (D-138), `ledgerEntry` (D-148, user fill/confirm/edit — topic/answer excluded, D-093). Every entry carries an `effect: 'permitted' | 'denied'` field (default `permitted`, D-114) — a denied `requirePermission` check writes a `resourceType: 'permission'` entry with just the attempted permission, since the route handler (and its resource-specific payload) never ran.
+- `src/requests.ts` — API request/response schemas (`CreateSourceRequest`, `EnqueueJobRequest`, `PresignUploadRequest`, `AuthMethodSchema`/`ListAuthMethodsResponseSchema`; Context Library `Create`/`UpdateContextRequest`, `ReviewApprovalRequest`, `CreateContextGrantRequest`, `Create`/`CreateMessageRequest` (+ `bypassLedgerGating` D-149), `Create`/`UpdateLedgerEntryRequest` D-148, etc.)
+- `src/messages.ts` — SQS message schemas (`TranscriptionJobMessage`, `SummarizationJobMessage`, `ChatJobMessage` D-139, `LedgerJobMessage` D-148)
+- `src/ws.ts` — generalized real-time WebSocket framework (D-109, supersedes D-061's one-off `WsStatusMessage`): `WsScopeSchema` (`user`/`org`/`broadcast`), `WsEventPayloadMap` (per-event-type payload registry — `job_status`, plus Context Library events `classification_ready` (D-133), `chat_delta`/`chat_complete`/`chat_failed` (D-139/D-145), `ledger_ready` (D-148)), `WsEventEnvelopeSchema` (discriminated on `type`), `buildWsEvent()`. Carries zero AWS SDK dependencies — the actual push call lives in `heediq-api/src/lib/wsPush.ts`.
 - `src/api.ts` — `ApiSuccess<T>` / `ApiError` response envelope types
 - `src/logger.ts` — `createLogger(service)` structured JSON logger with correlation fields (`sourceId`/`requestId`), a recursive PII-redaction denylist (D-085), and a `LOG_LEVEL`-gated `debug`/`info`/`warn`/`error` threshold, default `info` (D-093)
 - `src/passwordPolicy.ts` — `PASSWORD_POLICY`, `PASSWORD_POLICY_RULES`, `isPasswordPolicyCompliant()`: single source of truth for password rules, consumed by heediq-api and heediq-web. The Cognito User Pool's `passwordPolicy` in `heediq-infra/lib/foundation/cognito.ts` is a separate literal kept in sync via the periodic consistency-check, not by import — see `DECISIONS.md` D-020 and `rules/10-consistency-check.md`.
@@ -55,7 +55,24 @@ these is the infra build-order step, not this package — see `plans/context-lib
 
 ## Versioning
 
-Current version: `0.15.2`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+Current version: `0.15.4`. Graduates to `1.0.0` when the contract stabilises (D-047). Use semver — consuming repos pin to a version and Renovate handles bumps.
+
+**0.15.4 — Decision Ledger generation + fill + chat-gating contracts (§11 step 6, D-148/D-149), additive.**
+`ws.ts` gains the `ledger_ready` event (`contextId`/`sourceId`/`entryCount`, pushed at user scope when
+the review-time reconciliation pass finishes, D-148). `messages.ts` gains `LedgerJobMessageSchema`
+(the `heediq-ledger` SQS job: `jobId`/`contextId`/`sourceId`/`orgId`/`tier`). `requests.ts` gains
+`Create`/`UpdateLedgerEntryRequestSchema` (wizard step-3 fill + standalone editing; `answer: null`
+clears, origin/confidence server-managed) and adds `bypassLedgerGating?` to `CreateMessageRequestSchema`
+(D-149 chat gating opt-out). `context.ts` gains `LEDGER_GATED_ERROR_CODE` + `LedgerGatedDetailsSchema`
+(the `ApiError.details` shape a gated chat turn returns — `blockingEntries: {entryId, topic, status}[]`).
+`audit.ts`'s `AuditPayloadMap` gains `ledgerEntry` (entryId/contextId/status/origin — topic/answer
+excluded, D-093). No breaking changes.
+
+**0.15.3 — Context chat persistence + streaming contracts (§11 step 4c-ii, D-138/D-139/D-145), additive.**
+`context.ts` gains `ConversationSchema`/`ChatMessageSchema` (D-138); `messages.ts` gains
+`ChatJobMessageSchema` (D-139); `requests.ts` gains `CreateConversationRequestSchema`/
+`CreateMessageRequestSchema`; `audit.ts` gains `conversation`/`chatMessage` payloads (content excluded,
+D-093); `ws.ts` gains the `chat_failed` event (D-145). No breaking changes.
 
 **0.15.2 — Cross-org grant issuance contracts + TTL type fix (§11 step 4c-i), additive + bug fix.**
 `context.ts`'s `ContextGrantSchema.expiresAt` changes from `z.string().datetime()` to `z.number().int()`

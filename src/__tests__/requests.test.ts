@@ -22,6 +22,8 @@ import {
   CreateContextGrantRequestSchema,
   CreateConversationRequestSchema,
   CreateMessageRequestSchema,
+  CreateLedgerEntryRequestSchema,
+  UpdateLedgerEntryRequestSchema,
 } from '../requests.js'
 
 const uuid = '00000000-0000-0000-0000-000000000001'
@@ -296,5 +298,47 @@ describe('CreateMessageRequestSchema (D-139, §11 step 4c-ii)', () => {
   })
   it('rejects empty content', () => {
     expect(() => CreateMessageRequestSchema.parse({ content: '' })).toThrow()
+  })
+  it('accepts the bypassLedgerGating flag (D-149)', () => {
+    expect(CreateMessageRequestSchema.parse({ content: 'go anyway', bypassLedgerGating: true }))
+      .toMatchObject({ bypassLedgerGating: true })
+  })
+  it('defaults bypassLedgerGating to undefined when omitted', () => {
+    expect(CreateMessageRequestSchema.parse({ content: 'hi' }).bypassLedgerGating).toBeUndefined()
+  })
+})
+
+describe('CreateLedgerEntryRequestSchema (D-148, §11 step 6)', () => {
+  it('accepts a topic-only entry (open question)', () => {
+    expect(CreateLedgerEntryRequestSchema.parse({ topic: 'Which auth provider?' }))
+      .toMatchObject({ topic: 'Which auth provider?' })
+  })
+  it('accepts a topic with an answer', () => {
+    expect(CreateLedgerEntryRequestSchema.parse({ topic: 'DB choice', answer: 'DynamoDB' }))
+      .toMatchObject({ answer: 'DynamoDB' })
+  })
+  it('accepts an explicit null answer', () => {
+    expect(CreateLedgerEntryRequestSchema.parse({ topic: 'Open item', answer: null }).answer).toBeNull()
+  })
+  it('rejects an empty topic', () => {
+    expect(() => CreateLedgerEntryRequestSchema.parse({ topic: '' })).toThrow()
+  })
+})
+
+describe('UpdateLedgerEntryRequestSchema (D-148, §11 step 6)', () => {
+  it('accepts filling an answer', () => {
+    expect(UpdateLedgerEntryRequestSchema.parse({ answer: 'Postgres' })).toMatchObject({ answer: 'Postgres' })
+  })
+  it('accepts confirming via status', () => {
+    expect(UpdateLedgerEntryRequestSchema.parse({ status: 'confirmed' })).toMatchObject({ status: 'confirmed' })
+  })
+  it('accepts clearing an answer with null', () => {
+    expect(UpdateLedgerEntryRequestSchema.parse({ answer: null }).answer).toBeNull()
+  })
+  it('rejects an empty body', () => {
+    expect(() => UpdateLedgerEntryRequestSchema.parse({})).toThrow()
+  })
+  it('rejects an invalid status', () => {
+    expect(() => UpdateLedgerEntryRequestSchema.parse({ status: 'maybe' })).toThrow()
   })
 })
