@@ -40,5 +40,18 @@ export const ChatJobMessageSchema = z.object({
 })
 export type ChatJobMessage = z.infer<typeof ChatJobMessageSchema>
 
+// SQS message sent to heediq-ledger queue (D-148, §11 step 6 fast-follow). Enqueued by heediq-api's
+// review-approval route after it commits a source's kept ExtractedItems into `contextId`; the ledger
+// worker reconciles the Context's existing Decision Ledger against this source's kept items in one
+// prompt-cached Claude call (tier picks the model, D-139), then pushes a `ledger_ready` WS event.
+export const LedgerJobMessageSchema = z.object({
+  jobId: z.string().uuid(),
+  contextId: z.string().uuid(),
+  sourceId: z.string().uuid(),
+  orgId: z.string().uuid(),
+  tier: TierSchema,
+})
+export type LedgerJobMessage = z.infer<typeof LedgerJobMessageSchema>
+
 // WebSocket push events (job_status and beyond) moved to ws.ts's generic envelope + registry
 // (D-109, generalizes D-061's one-off WsStatusMessageSchema).

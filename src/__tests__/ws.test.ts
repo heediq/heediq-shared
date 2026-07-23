@@ -128,6 +128,25 @@ describe('WsEventEnvelopeSchema', () => {
     }
     expect(() => WsEventEnvelopeSchema.parse(event)).toThrow()
   })
+
+  it('parses a ledger_ready event at user scope (D-148)', () => {
+    const event = buildWsEvent({
+      scope: { kind: 'user', userId: 'u1' },
+      type: 'ledger_ready',
+      payload: { contextId: uuid, sourceId: uuid, entryCount: 4 },
+    })
+    expect(WsEventEnvelopeSchema.parse(event)).toMatchObject({ type: 'ledger_ready' })
+  })
+
+  it('rejects a ledger_ready payload with a negative entryCount', () => {
+    const event = {
+      scope: { kind: 'user' as const, userId: 'u1' },
+      occurredAt: now,
+      type: 'ledger_ready' as const,
+      payload: { contextId: uuid, sourceId: uuid, entryCount: -1 },
+    }
+    expect(() => WsEventEnvelopeSchema.parse(event)).toThrow()
+  })
 })
 
 describe('buildWsEvent', () => {
